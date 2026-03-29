@@ -81,7 +81,8 @@ bg = d / 'best_gains.json'
 if bg.exists():
     data = json.load(open(bg))
     g = data.get('gains', {})
-    print(f'Best gains: Kp={g.get(\"Kp_roll\",\"?\")}, Ki={g.get(\"Ki_roll\",\"?\")}, Kd={g.get(\"Kd_roll\",\"?\")}')
+    print(f'Best gains: Kp_r={g.get(\"Kp_roll\",\"?\")}, Ki_r={g.get(\"Ki_roll\",\"?\")}, Kd_r={g.get(\"Kd_roll\",\"?\")}  '
+          f'Kp_p={g.get(\"Kp_pitch\",\"?\")}, Ki_p={g.get(\"Ki_pitch\",\"?\")}, Kd_p={g.get(\"Kd_pitch\",\"?\")}')
     print(f'Score: {data.get(\"score\",\"?\")}')
 mc = d / 'monte_carlo_results.json'
 if mc.exists():

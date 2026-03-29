@@ -79,7 +79,7 @@ Pin assignments verified against the firmware source code (V4/V5).
 |------------|----------------------|
 | Mode       | SoftAP (Access Point)|
 | SSID       | `ROCKET_LAUNCHER`    |
-| Password   | `launchpad1`         |
+| Password   | `launch_secure` (matches `Firmware/Launcher/src/main.cpp`) |
 | IP Address | 192.168.4.1          |
 | UDP Port   | 4444                 |
 

@@ -39,8 +39,10 @@ wind disturbance (Dryden turbulence), and quaternion-based attitude dynamics.
 Used to optimise PID gains and validate flight reliability.
 
 ### PID Gain Optimisation
-Differential evolution search over roll control gains (Kp, Ki, Kd), tested
-across multiple wind conditions. Runs on multi-core SLURM nodes.
+Differential evolution over roll PID (and optional **six-axis** roll+pitch
+objective via `pid_optimizer.py --six-axis`). Expanded gain bounds (Kd up to 5).
+Cluster: `run_pid_optimizer.sh` (roll-only default), `run_pid_sixaxis.sh` for
+pitch-augmented tuning.
 
 ### Monte Carlo Reliability Analysis
 Statistical assessment of flight performance under parameter uncertainty
@@ -50,6 +52,18 @@ and confidence intervals.
 ### Extended Kalman Filter (V5 Firmware)
 Drift-free attitude estimation fusing gyroscope and accelerometer data.
 Automatic apogee detection. Backward-compatible with the V4 launcher.
+
+### Aerodynamic Design Improvement
+Barrowman method sweep of 38,880 configurations to find optimal fin, canard,
+and nose cone geometry. Von Karman nose, larger folding fins, and boat tail
+improved stability from -4.3 to +1.1 calibres and increased roll authority by
+40x. Candidate STLs generated parametrically for CFD validation.
+
+### OpenFOAM CFD Integration
+Automated steady-state RANS (k-omega SST) pipeline with snappyHexMesh,
+parametric Python driver, and SLURM job scripts. **`run_cfd.sh` uses
+`--serial-mesh`** (serial snappyHexMesh, parallel `simpleFoam`) and sources
+Lmod under bash for reliable OpenFOAM modules on Eureka.
 
 ### HPC Integration
 SLURM job scripts for the Eureka cluster with proper module loading,
@@ -65,12 +79,16 @@ parallel execution, and automated pipelines.
 │   ├── Launcher/src/          # ESP32 ground station
 │   └── dashboard.py           # Python GUI
 ├── Simulation/
-│   ├── src/                   # 6-DOF simulation, optimiser, Monte Carlo
+│   ├── src/                   # 6-DOF sim, optimiser, Monte Carlo, Barrowman
+│   ├── cfd/                   # OpenFOAM templates and CFD driver
 │   ├── jobs/                  # SLURM job scripts
-│   └── results/               # Output data
-├── Mechanical/                # Fusion 360 CAD files
+│   └── results/               # Output data and candidate STLs
+├── cad/                       # STL exports (Unix-friendly names)
+│   └── fusion360/             # Original Fusion 360 .f3z archives
+├── Mechanical/                # Legacy CAD location
 ├── OpenRocket/                # Aerodynamic stability analysis
 └── docs/
+    ├── AERODYNAMICS.md        # Barrowman analysis, design sweep, CFD
     ├── WIRING.md              # Pin assignments (verified against firmware)
     ├── SIMULATION.md          # Simulation framework guide
     ├── FIRMWARE_IMPROVEMENTS.md  # V4 → V5 changelog
@@ -84,10 +102,13 @@ parallel execution, and automated pipelines.
 
 ### Run the Simulation Locally
 ```bash
-cd Simulation/src
-pip install numpy scipy matplotlib
-python rocket_dynamics.py
+cd Simulation
+python3 -m venv .venv && source .venv/bin/activate
+pip install numpy scipy trimesh matplotlib
+python src/rocket_dynamics.py
 ```
+Motor **total impulse is enforced at 10 N·s** (thrust curve is scaled); expect
+lower apogee than an unscaled 15 N plateau used in older runs.
 
 ### Run on Eureka Cluster
 ```bash
@@ -109,6 +130,7 @@ pio run -t upload              # Flash to ESP32
 
 | Document | Description |
 |----------|-------------|
+| [AERODYNAMICS.md](docs/AERODYNAMICS.md) | Barrowman analysis, design sweep, CFD pipeline |
 | [SIMULATION.md](docs/SIMULATION.md) | Simulation physics, running instructions, parameters |
 | [FIRMWARE_IMPROVEMENTS.md](docs/FIRMWARE_IMPROVEMENTS.md) | V4 → V5 firmware changes |
 | [CLUSTER_GUIDE.md](docs/CLUSTER_GUIDE.md) | Eureka SLURM cluster usage |

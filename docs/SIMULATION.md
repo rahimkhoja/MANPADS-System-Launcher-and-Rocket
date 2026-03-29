@@ -11,8 +11,11 @@ to optimise PID gains and validate flight reliability under uncertainty.
 Simulation/
 ├── src/
 │   ├── rocket_dynamics.py   # 6-DOF physics engine
-│   ├── pid_optimizer.py     # Differential evolution + grid search
+│   ├── pid_optimizer.py     # DE + grid (roll-only or --six-axis)
 │   ├── monte_carlo.py       # Statistical flight analysis
+│   ├── design_sweep.py      # Barrowman sweep + STL export
+│   ├── barrowman.py         # Barrowman aerodynamics
+│   ├── rocket_geometry.py   # Parametric STL (trimesh)
 │   ├── kalman_filter.py     # EKF implementation + C++ header generator
 │   └── rl_controller.py     # Reinforcement learning (PPO) controller
 ├── jobs/
@@ -36,7 +39,7 @@ NED (North-East-Down). The body x-axis points along the rocket's longitudinal ax
 ### Forces Modelled
 | Force              | Description                                         |
 |--------------------|-----------------------------------------------------|
-| Thrust             | Time-varying solid motor profile (C-class, ~15 N peak) |
+| Thrust             | Trapezoidal profile **scaled** so ∫F dt = 10 N·s (C-class) |
 | Gravity            | Transformed to body frame via rotation matrix       |
 | Aerodynamic drag   | Axial, based on Cd0 + incremental canard drag       |
 | Normal force       | CNa-based restoring force from body + fins          |
@@ -45,7 +48,7 @@ NED (North-East-Down). The body x-axis points along the rocket's longitudinal ax
 ### Moments Modelled
 | Moment             | Description                                         |
 |--------------------|-----------------------------------------------------|
-| Roll (canard)      | N × F_canard × arm for all 4 canards               |
+| Roll/pitch/yaw (canard) | Differential [L,R,U,D] deflections → moments via `mix_canards` |
 | Roll damping       | Clp × q̄Sd × (d/2V) × p                            |
 | Pitch restoring    | CNa × stability_margin × α × q̄SL                   |
 | Pitch damping      | Cmq × q̄SL × (d/2V) × q                            |
@@ -64,14 +67,14 @@ gimbal lock.
 
 ## Controller
 
-Roll-only PD(I) controller matching the real firmware:
+`CanardController` runs independent PIDs on roll, pitch, and yaw (set pitch/yaw
+gains to zero for roll-only, matching V4/V5 firmware). D-term uses body angular
+rate in deg/s (same convention as the rocket firmware). Outputs are mixed to four
+surfaces:
 
-```
-output = Kp × roll_angle + Ki × ∫roll_angle + Kd × roll_rate
-```
+`[L,R,U,D] = mix(roll_cmd, pitch_cmd, yaw_cmd)` with saturation on the 4-vector.
 
-All 4 canards deflect by the same amount, producing pure roll torque. The D-term
-uses the gyro rate directly (not differentiated error), matching `main.cpp` line 107.
+`pitch_rms_burn` in results is RMS deviation from **launch pitch** during burn.
 
 ---
 
@@ -88,6 +91,13 @@ python pid_optimizer.py --method grid --grid-points 5 --wind-speeds 0 3 --num-ru
 
 # Small Monte Carlo
 python monte_carlo.py --runs 100 --seed 42
+
+# Six-axis PID tuning (roll + pitch in objective)
+python pid_optimizer.py --method de --six-axis --workers 8
+
+# Re-export top STLs from saved sweep (no full 38k re-sweep)
+python design_sweep.py --from-json ../results/sweep_results.json \
+  --generate-stl ../results/candidate_stls --top 5
 
 # Generate Kalman filter C++ header
 python kalman_filter.py
@@ -109,6 +119,12 @@ sbatch run_pid_optimizer.sh
 # Monte Carlo (2000 runs, ~1 hour, 16 CPUs)
 sbatch run_monte_carlo.sh
 
+# Optional: six-axis PID (overwrites best_gains.json — merge with roll-only if needed)
+sbatch run_pid_sixaxis.sh
+
+# CFD sweep (bash + Lmod + --serial-mesh inside driver)
+sbatch run_cfd.sh ../../cad/rocket_assembly.stl
+
 # Full pipeline (optimise → MC → report)
 sbatch run_full_analysis.sh
 ```
@@ -120,10 +136,11 @@ Monitor with `squeue -u $USER` and check output in `Simulation/results/`.
 ## PID Optimisation
 
 ### Differential Evolution
-- Population: 40, Generations: 60
+- Population: 40, Generations: 60 (defaults; jobs may use 30×40)
 - Wind speeds: 0, 2, 5 m/s crosswind
-- Objective: minimise roll RMS during motor burn phase
-- Parameters: Kp_roll ∈ [0.1, 3.0], Ki_roll ∈ [0, 0.5], Kd_roll ∈ [0.02, 1.5]
+- Objective: minimise roll RMS during burn; with `--six-axis`, roll RMS + 0.25× pitch RMS (burn)
+- Roll-only bounds: Kp_roll ∈ [0.05, 5.0], Ki_roll ∈ [0, 0.5], Kd_roll ∈ [0.05, 5.0]
+- Six-axis adds Kp/Ki/Kd_pitch with yaw slaved to 0.2× pitch gains in the optimiser
 
 ### Grid Search
 For verification. Tests a grid of Kp × Ki × Kd values.
@@ -135,25 +152,59 @@ Results are saved to `results/best_gains.json`.
 ## Monte Carlo Analysis
 
 - Randomises: mass, CG, inertia, drag, thrust, wind speed/direction, launch angle
-- Success criteria: altitude > 20 m **and** roll RMS during burn < 15°
+- Success criteria: altitude > 20 m, roll RMS during burn < 15°; if `Kp_pitch > 0.01`, also pitch RMS (burn) < 30°
 - Default: 2000 runs with parallel execution
-- Reports success rate, altitude distribution, roll statistics
+- Reports success rate, altitude distribution, roll statistics; **`elapsed_seconds`** is recorded correctly in the JSON summary
 
 Results are saved to `results/monte_carlo_results.json`.
 
 ---
 
-## Key Parameters
+## Key Parameters (Improved Design)
 
-| Parameter        | Value   | Source                           |
-|------------------|---------|----------------------------------|
-| Mass             | 200 g   | BOM estimate                     |
-| Length           | 30 cm   | CAD                              |
-| Diameter         | 40 mm   | Tube spec                        |
-| Stability margin | 2 cm    | OpenRocket (1.0 calibre)         |
-| Motor impulse    | 10 N·s  | C-class solid                    |
-| Peak thrust      | 15 N    | Motor data                       |
-| Burn time        | 1.2 s   | Motor data                       |
-| Canard area      | 6 cm²   | Per canard (~20×30 mm)           |
-| CNa              | 8.0/rad | OpenRocket full-rocket slope     |
-| Cd0              | 0.45    | Including base drag              |
+| Parameter        | Value    | Source                               |
+|------------------|----------|--------------------------------------|
+| Mass             | 200 g    | BOM estimate                         |
+| Length           | 669 mm   | STL measurement (120mm nose + 549mm) |
+| Diameter         | 75 mm    | STL measurement                      |
+| Stability margin | 1.06 cal | Barrowman analysis                   |
+| Motor impulse    | 10 N·s   | C-class solid                        |
+| Peak thrust      | 15 N     | Motor data                           |
+| Burn time        | 1.2 s    | Motor data                           |
+| Canard area      | 9.0 cm²  | Per canard (20×45 mm planform, improved) |
+| Canard span      | 20 mm    | Semi-span beyond body                |
+| Fin span         | 60 mm    | Semi-span, folding                   |
+| CNa              | 8.2/rad  | Barrowman                            |
+| Cd0              | 0.64     | Barrowman (Von Karman + boat tail)   |
+
+See [AERODYNAMICS.md](AERODYNAMICS.md) for the full design sweep methodology
+and the comparison between baseline and improved configurations.
+
+---
+
+## Barrowman Aerodynamics
+
+The `Simulation/src/barrowman.py` module implements the Barrowman (1966) method
+for rapid aerodynamic coefficient estimation. It can evaluate a complete rocket
+configuration in under 1 ms, enabling grid sweeps of tens of thousands of
+designs.
+
+```bash
+python Simulation/src/barrowman.py
+```
+
+## OpenFOAM CFD
+
+For higher-fidelity validation, the `Simulation/cfd/` directory provides an
+automated OpenFOAM pipeline:
+
+```bash
+# Set up and run a single case (add --serial-mesh if parallel snappyHexMesh crashes)
+python Simulation/cfd/run_case.py --stl cad/rocket_assembly.stl --velocity 40 --aoa 5 --serial-mesh
+
+# Submit a full sweep on SLURM (script enables --serial-mesh and bash+Lmod)
+cd Simulation/jobs
+sbatch run_cfd.sh ../../cad/rocket_assembly.stl
+```
+
+See the [AERODYNAMICS.md](AERODYNAMICS.md) documentation for details.

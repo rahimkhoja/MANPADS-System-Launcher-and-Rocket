@@ -12,7 +12,7 @@ set -euo pipefail
 export PYTHONUNBUFFERED=1
 
 echo "=========================================="
-echo "PID Roll-Gain Optimizer"
+echo "PID Roll-Gain Optimizer (Improved Design)"
 echo "Date: $(date)"
 echo "Node: $(hostname)"
 echo "Job:  ${SLURM_JOB_ID}"
@@ -34,14 +34,23 @@ RESULTS_DIR="${SLURM_SUBMIT_DIR}/../results"
 mkdir -p "${RESULTS_DIR}"
 
 echo ""
-echo "--- Differential Evolution ---"
+echo "--- Grid Search (coarse) ---"
 python -u pid_optimizer.py \
-    --method de \
+    --method grid \
     --wind-speeds 0 2 5 \
     --num-runs 2 \
     --workers "${SLURM_CPUS_PER_TASK}" \
-    --population 40 \
-    --generations 60 \
+    --output-dir "${RESULTS_DIR}"
+
+echo ""
+echo "--- Differential Evolution (roll-only; use run_pid_sixaxis.sh for pitch) ---"
+python -u pid_optimizer.py \
+    --method de \
+    --wind-speeds 0 2 5 \
+    --num-runs 3 \
+    --workers "${SLURM_CPUS_PER_TASK}" \
+    --population 30 \
+    --generations 40 \
     --output-dir "${RESULTS_DIR}"
 
 echo ""

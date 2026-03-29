@@ -44,6 +44,20 @@ float Ki = 0.05f;
 float Kd = 0.28f;
 float integralLimit = 15.0f;
 
+// Optional LiPo sense: GPIO36 + 100k:100k divider to ADC (set -1 to disable)
+#ifndef BATTERY_ADC_PIN
+#define BATTERY_ADC_PIN 36
+#endif
+
+static float readBatteryVoltage() {
+#if BATTERY_ADC_PIN >= 0
+    int mv = analogReadMilliVolts(BATTERY_ADC_PIN);
+    return (mv / 1000.0f) * 2.0f; // 2:1 divider
+#else
+    return 0.0f;
+#endif
+}
+
 // ============== HARDWARE ==============
 Servo igniteServo;
 Servo leftServo, rightServo, upServo, downServo;
@@ -100,6 +114,10 @@ void setup() {
     mpu.setAccelerometerRange(MPU6050_RANGE_8_G);
     mpu.setGyroRange(MPU6050_RANGE_500_DEG);
     mpu.setFilterBandwidth(MPU6050_BAND_21_HZ);
+
+#if BATTERY_ADC_PIN >= 0
+    pinMode(BATTERY_ADC_PIN, INPUT);
+#endif
 
     ESP32PWM::allocateTimer(0);
     ESP32PWM::allocateTimer(1);
@@ -198,9 +216,10 @@ void loop() {
                              (sysState == IGNITING) ? "IGNITING" :
                              (sysState == FLIGHT) ? "FLIGHT" : "RECOVERY";
             char buf[128];
+            float vb = readBatteryVoltage();
             snprintf(buf, sizeof(buf),
-                "DATA,%.2f,%.2f,%.2f,%d,%s,%.2f,%.2f,%.3f",
-                rollDeg, pitch, yaw, lastServoOffset, st, Kp, Kd, bx);
+                "DATA,%.2f,%.2f,%.2f,%d,%s,%.2f,%.2f,%.3f,%.2f",
+                rollDeg, pitch, yaw, lastServoOffset, st, Kp, Kd, bx, vb);
             Serial2.println(buf);
         } else {
             // V4 compatible: DATA,ax,ay,az,roll,rate,offset,state,Kp,Kd,skew
@@ -251,11 +270,19 @@ void loop() {
                 Serial2.println("ACK:CALIBRATED");
             }
             else if (cmdBuffer.startsWith("PID,")) {
+                // PID,Kp,Kd  (V4 compat, Ki=0)  or  PID,Kp,Ki,Kd
                 int c1 = cmdBuffer.indexOf(',');
                 int c2 = cmdBuffer.indexOf(',', c1 + 1);
+                int c3 = cmdBuffer.indexOf(',', c2 + 1);
                 if (c1 > 0 && c2 > 0) {
                     Kp = cmdBuffer.substring(c1 + 1, c2).toFloat();
-                    Kd = cmdBuffer.substring(c2 + 1).toFloat();
+                    if (c3 > 0) {
+                        Ki = cmdBuffer.substring(c2 + 1, c3).toFloat();
+                        Kd = cmdBuffer.substring(c3 + 1).toFloat();
+                    } else {
+                        Ki = 0.0f;
+                        Kd = cmdBuffer.substring(c2 + 1).toFloat();
+                    }
                     Serial2.println("ACK:PID_SET");
                 }
             }

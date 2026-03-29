@@ -43,8 +43,11 @@ sbatch run_validation.sh
 | Script                  | CPUs | Time   | Description                     |
 |-------------------------|------|--------|---------------------------------|
 | `run_validation.sh`     | 4    | 10 min | Smoke test — verify everything works |
-| `run_pid_optimizer.sh`  | 16   | 2 hr   | Differential evolution gain tuning |
+| `run_pid_optimizer.sh`  | 16   | 2 hr   | Grid + DE roll-only gain tuning |
+| `run_pid_sixaxis.sh`    | 16   | 2 hr   | DE with roll+pitch objective (`--six-axis`) |
 | `run_monte_carlo.sh`    | 16   | 2 hr   | 2000-run statistical analysis   |
+| `run_cfd.sh`            | 16   | 6 hr   | OpenFOAM matrix (`--serial-mesh` in driver) |
+| `run_design_sweep.sh`   | 1    | 30 min | Barrowman sweep (+ optional STLs) |
 | `run_rl_training.sh`    | 8+GPU| 4 hr   | PPO reinforcement learning      |
 | `run_full_analysis.sh`  | 16   | 6 hr   | Complete pipeline               |
 

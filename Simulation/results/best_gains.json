@@ -1,15 +1,19 @@
 {
   "gains": {
-    "Kp_roll": 1.719149937731581,
-    "Ki_roll": 0.31718318699682757,
-    "Kd_roll": 1.4411143314220127
+    "Kp_roll": 4.512162535997526,
+    "Ki_roll": 0.32038102022047255,
+    "Kd_roll": 3.666076280399192,
+    "Kp_pitch": 0.3433810121202858,
+    "Ki_pitch": 0.3,
+    "Kd_pitch": 0.0,
+    "Kp_yaw": 0.06867620242405717,
+    "Ki_yaw": 0.06,
+    "Kd_yaw": 0.0
   },
-  "score": 63.184291469973516,
-  "method": "de",
-  "wind_speeds": [
-    0.0,
-    2.0,
-    5.0
-  ],
-  "elapsed_seconds": 2715.695094347
+  "score": 106.9459574946872,
+  "method": "de_roll_plus_sixaxis_pitch",
+  "six_axis": true,
+  "wind_speeds": [0.0, 2.0, 5.0],
+  "elapsed_seconds": 0.0,
+  "notes": "Roll gains from DE (30 gen); pitch/yaw slaved from six-axis DE run (Mar 2026). Re-run jobs/run_pid_optimizer.sh on Eureka for full re-tune."
 }

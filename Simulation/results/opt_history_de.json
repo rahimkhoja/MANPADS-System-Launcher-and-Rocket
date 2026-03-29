@@ -1,602 +1,302 @@
 [
   {
     "generation": 0,
-    "best_fitness": 63.60677841967831,
-    "mean_fitness": 66.54549924531253,
+    "best_fitness": 107.3338822176999,
+    "mean_fitness": 107.33389092392372,
     "best_gains": {
-      "Kp_roll": 1.5416834713714485,
-      "Ki_roll": 0.14812233624394755,
-      "Kd_roll": 1.5
+      "Kp_roll": 4.897659225676448,
+      "Ki_roll": 0.31776186958719355,
+      "Kd_roll": 2.0791123520853563
     }
   },
   {
     "generation": 1,
-    "best_fitness": 63.60677841967831,
-    "mean_fitness": 65.24148740902302,
+    "best_fitness": 107.3338822176999,
+    "mean_fitness": 107.33389092392372,
     "best_gains": {
-      "Kp_roll": 1.5416834713714485,
-      "Ki_roll": 0.14812233624394755,
-      "Kd_roll": 1.5
+      "Kp_roll": 4.897659225676448,
+      "Ki_roll": 0.31776186958719355,
+      "Kd_roll": 2.0791123520853563
     }
   },
   {
     "generation": 2,
-    "best_fitness": 63.35585690280237,
-    "mean_fitness": 64.07535822789657,
+    "best_fitness": 107.3338822176999,
+    "mean_fitness": 107.33389092392372,
     "best_gains": {
-      "Kp_roll": 2.0915973595160255,
-      "Ki_roll": 0.07810671975031129,
-      "Kd_roll": 1.5
+      "Kp_roll": 4.897659225676448,
+      "Ki_roll": 0.31776186958719355,
+      "Kd_roll": 2.0791123520853563
     }
   },
   {
     "generation": 3,
-    "best_fitness": 63.35585690280237,
-    "mean_fitness": 63.66568056927501,
+    "best_fitness": 107.3338822176999,
+    "mean_fitness": 107.33389092392372,
     "best_gains": {
-      "Kp_roll": 2.0915973595160255,
-      "Ki_roll": 0.07810671975031129,
-      "Kd_roll": 1.5
+      "Kp_roll": 4.897659225676448,
+      "Ki_roll": 0.31776186958719355,
+      "Kd_roll": 2.0791123520853563
     }
   },
   {
     "generation": 4,
-    "best_fitness": 63.35585690280237,
-    "mean_fitness": 63.60857924944577,
+    "best_fitness": 107.3338822176999,
+    "mean_fitness": 107.33389092392372,
     "best_gains": {
-      "Kp_roll": 2.0915973595160255,
-      "Ki_roll": 0.07810671975031129,
-      "Kd_roll": 1.5
+      "Kp_roll": 4.897659225676448,
+      "Ki_roll": 0.31776186958719355,
+      "Kd_roll": 2.0791123520853563
     }
   },
   {
     "generation": 5,
-    "best_fitness": 63.35585690280237,
-    "mean_fitness": 63.513636811572624,
+    "best_fitness": 107.3338822176999,
+    "mean_fitness": 107.33389092392372,
     "best_gains": {
-      "Kp_roll": 2.0915973595160255,
-      "Ki_roll": 0.07810671975031129,
-      "Kd_roll": 1.5
+      "Kp_roll": 4.897659225676448,
+      "Ki_roll": 0.31776186958719355,
+      "Kd_roll": 2.0791123520853563
     }
   },
   {
     "generation": 6,
-    "best_fitness": 63.35585690280237,
-    "mean_fitness": 63.513636811572624,
+    "best_fitness": 107.3338822176999,
+    "mean_fitness": 107.33389092392372,
     "best_gains": {
-      "Kp_roll": 2.0915973595160255,
-      "Ki_roll": 0.07810671975031129,
-      "Kd_roll": 1.5
+      "Kp_roll": 4.897659225676448,
+      "Ki_roll": 0.31776186958719355,
+      "Kd_roll": 2.0791123520853563
     }
   },
   {
     "generation": 7,
-    "best_fitness": 63.35585690280237,
-    "mean_fitness": 63.48978802145742,
+    "best_fitness": 107.3338822176999,
+    "mean_fitness": 107.33389092392372,
     "best_gains": {
-      "Kp_roll": 2.0915973595160255,
-      "Ki_roll": 0.07810671975031129,
-      "Kd_roll": 1.5
+      "Kp_roll": 4.897659225676448,
+      "Ki_roll": 0.31776186958719355,
+      "Kd_roll": 2.0791123520853563
     }
   },
   {
     "generation": 8,
-    "best_fitness": 63.35585690280237,
-    "mean_fitness": 63.48297919646244,
+    "best_fitness": 107.3338822176999,
+    "mean_fitness": 107.33389092392372,
     "best_gains": {
-      "Kp_roll": 2.0915973595160255,
-      "Ki_roll": 0.07810671975031129,
-      "Kd_roll": 1.5
+      "Kp_roll": 4.897659225676448,
+      "Ki_roll": 0.31776186958719355,
+      "Kd_roll": 2.0791123520853563
     }
   },
   {
     "generation": 9,
-    "best_fitness": 63.35585690280237,
-    "mean_fitness": 63.48297919646244,
+    "best_fitness": 107.3338822176999,
+    "mean_fitness": 107.33389092392372,
     "best_gains": {
-      "Kp_roll": 2.0915973595160255,
-      "Ki_roll": 0.07810671975031129,
-      "Kd_roll": 1.5
+      "Kp_roll": 4.897659225676448,
+      "Ki_roll": 0.31776186958719355,
+      "Kd_roll": 2.0791123520853563
     }
   },
   {
     "generation": 10,
-    "best_fitness": 63.35585690280237,
-    "mean_fitness": 63.48297919646244,
+    "best_fitness": 107.19909823362116,
+    "mean_fitness": 107.19912806720129,
     "best_gains": {
-      "Kp_roll": 2.0915973595160255,
-      "Ki_roll": 0.07810671975031129,
-      "Kd_roll": 1.5
+      "Kp_roll": 5.0,
+      "Ki_roll": 0.10995724071091217,
+      "Kd_roll": 1.0754905460394122
     }
   },
   {
     "generation": 11,
-    "best_fitness": 63.35585690280237,
-    "mean_fitness": 63.48170253609514,
+    "best_fitness": 107.19909823362116,
+    "mean_fitness": 107.19912806720129,
     "best_gains": {
-      "Kp_roll": 2.0915973595160255,
-      "Ki_roll": 0.07810671975031129,
-      "Kd_roll": 1.5
+      "Kp_roll": 5.0,
+      "Ki_roll": 0.10995724071091217,
+      "Kd_roll": 1.0754905460394122
     }
   },
   {
     "generation": 12,
-    "best_fitness": 63.35585690280237,
-    "mean_fitness": 63.48170253609514,
+    "best_fitness": 106.9459574946872,
+    "mean_fitness": 106.94597217846754,
     "best_gains": {
-      "Kp_roll": 2.0915973595160255,
-      "Ki_roll": 0.07810671975031129,
-      "Kd_roll": 1.5
+      "Kp_roll": 4.512162535997526,
+      "Ki_roll": 0.32038102022047255,
+      "Kd_roll": 3.666076280399192
     }
   },
   {
     "generation": 13,
-    "best_fitness": 63.35585690280237,
-    "mean_fitness": 63.472831935319654,
+    "best_fitness": 106.9459574946872,
+    "mean_fitness": 106.94597217846754,
     "best_gains": {
-      "Kp_roll": 2.0915973595160255,
-      "Ki_roll": 0.07810671975031129,
-      "Kd_roll": 1.5
+      "Kp_roll": 4.512162535997526,
+      "Ki_roll": 0.32038102022047255,
+      "Kd_roll": 3.666076280399192
     }
   },
   {
     "generation": 14,
-    "best_fitness": 63.35585690280237,
-    "mean_fitness": 63.46745449679793,
+    "best_fitness": 106.9459574946872,
+    "mean_fitness": 106.94597217846754,
     "best_gains": {
-      "Kp_roll": 2.0915973595160255,
-      "Ki_roll": 0.07810671975031129,
-      "Kd_roll": 1.5
+      "Kp_roll": 4.512162535997526,
+      "Ki_roll": 0.32038102022047255,
+      "Kd_roll": 3.666076280399192
     }
   },
   {
     "generation": 15,
-    "best_fitness": 63.35585690280237,
-    "mean_fitness": 63.46745449679793,
+    "best_fitness": 106.9459574946872,
+    "mean_fitness": 106.94597217846754,
     "best_gains": {
-      "Kp_roll": 2.0915973595160255,
-      "Ki_roll": 0.07810671975031129,
-      "Kd_roll": 1.5
+      "Kp_roll": 4.512162535997526,
+      "Ki_roll": 0.32038102022047255,
+      "Kd_roll": 3.666076280399192
     }
   },
   {
     "generation": 16,
-    "best_fitness": 63.35585690280237,
-    "mean_fitness": 63.46745449679793,
+    "best_fitness": 106.9459574946872,
+    "mean_fitness": 106.94597217846754,
     "best_gains": {
-      "Kp_roll": 2.0915973595160255,
-      "Ki_roll": 0.07810671975031129,
-      "Kd_roll": 1.5
+      "Kp_roll": 4.512162535997526,
+      "Ki_roll": 0.32038102022047255,
+      "Kd_roll": 3.666076280399192
     }
   },
   {
     "generation": 17,
-    "best_fitness": 63.35585690280237,
-    "mean_fitness": 63.46745449679793,
+    "best_fitness": 106.9459574946872,
+    "mean_fitness": 106.94597217846754,
     "best_gains": {
-      "Kp_roll": 2.0915973595160255,
-      "Ki_roll": 0.07810671975031129,
-      "Kd_roll": 1.5
+      "Kp_roll": 4.512162535997526,
+      "Ki_roll": 0.32038102022047255,
+      "Kd_roll": 3.666076280399192
     }
   },
   {
     "generation": 18,
-    "best_fitness": 63.35585690280237,
-    "mean_fitness": 63.46268479158168,
+    "best_fitness": 106.9459574946872,
+    "mean_fitness": 106.94597217846754,
     "best_gains": {
-      "Kp_roll": 2.0915973595160255,
-      "Ki_roll": 0.07810671975031129,
-      "Kd_roll": 1.5
+      "Kp_roll": 4.512162535997526,
+      "Ki_roll": 0.32038102022047255,
+      "Kd_roll": 3.666076280399192
     }
   },
   {
     "generation": 19,
-    "best_fitness": 63.35585690280237,
-    "mean_fitness": 63.46268479158168,
+    "best_fitness": 106.9459574946872,
+    "mean_fitness": 106.94597217846754,
     "best_gains": {
-      "Kp_roll": 2.0915973595160255,
-      "Ki_roll": 0.07810671975031129,
-      "Kd_roll": 1.5
+      "Kp_roll": 4.512162535997526,
+      "Ki_roll": 0.32038102022047255,
+      "Kd_roll": 3.666076280399192
     }
   },
   {
     "generation": 20,
-    "best_fitness": 63.35585690280237,
-    "mean_fitness": 63.456578508126384,
+    "best_fitness": 106.9459574946872,
+    "mean_fitness": 106.94597217846754,
     "best_gains": {
-      "Kp_roll": 2.0915973595160255,
-      "Ki_roll": 0.07810671975031129,
-      "Kd_roll": 1.5
+      "Kp_roll": 4.512162535997526,
+      "Ki_roll": 0.32038102022047255,
+      "Kd_roll": 3.666076280399192
     }
   },
   {
     "generation": 21,
-    "best_fitness": 63.35585690280237,
-    "mean_fitness": 63.456578508126384,
+    "best_fitness": 106.9459574946872,
+    "mean_fitness": 106.94597217846754,
     "best_gains": {
-      "Kp_roll": 2.0915973595160255,
-      "Ki_roll": 0.07810671975031129,
-      "Kd_roll": 1.5
+      "Kp_roll": 4.512162535997526,
+      "Ki_roll": 0.32038102022047255,
+      "Kd_roll": 3.666076280399192
     }
   },
   {
     "generation": 22,
-    "best_fitness": 63.35585690280237,
-    "mean_fitness": 63.456578508126384,
+    "best_fitness": 106.9459574946872,
+    "mean_fitness": 106.94597217846754,
     "best_gains": {
-      "Kp_roll": 2.0915973595160255,
-      "Ki_roll": 0.07810671975031129,
-      "Kd_roll": 1.5
+      "Kp_roll": 4.512162535997526,
+      "Ki_roll": 0.32038102022047255,
+      "Kd_roll": 3.666076280399192
     }
   },
   {
     "generation": 23,
-    "best_fitness": 63.35585690280237,
-    "mean_fitness": 63.45447953272246,
+    "best_fitness": 106.9459574946872,
+    "mean_fitness": 106.94597217846754,
     "best_gains": {
-      "Kp_roll": 2.0915973595160255,
-      "Ki_roll": 0.07810671975031129,
-      "Kd_roll": 1.5
+      "Kp_roll": 4.512162535997526,
+      "Ki_roll": 0.32038102022047255,
+      "Kd_roll": 3.666076280399192
     }
   },
   {
     "generation": 24,
-    "best_fitness": 63.35585690280237,
-    "mean_fitness": 63.45447953272246,
+    "best_fitness": 106.9459574946872,
+    "mean_fitness": 106.94597217846754,
     "best_gains": {
-      "Kp_roll": 2.0915973595160255,
-      "Ki_roll": 0.07810671975031129,
-      "Kd_roll": 1.5
+      "Kp_roll": 4.512162535997526,
+      "Ki_roll": 0.32038102022047255,
+      "Kd_roll": 3.666076280399192
     }
   },
   {
     "generation": 25,
-    "best_fitness": 63.29035447441891,
-    "mean_fitness": 63.37101275688995,
+    "best_fitness": 106.9459574946872,
+    "mean_fitness": 106.94597217846754,
     "best_gains": {
-      "Kp_roll": 2.30751391129186,
-      "Ki_roll": 0.5,
-      "Kd_roll": 1.5
+      "Kp_roll": 4.512162535997526,
+      "Ki_roll": 0.32038102022047255,
+      "Kd_roll": 3.666076280399192
     }
   },
   {
     "generation": 26,
-    "best_fitness": 63.29035447441891,
-    "mean_fitness": 63.37101275688995,
+    "best_fitness": 106.9459574946872,
+    "mean_fitness": 106.94597217846754,
     "best_gains": {
-      "Kp_roll": 2.30751391129186,
-      "Ki_roll": 0.5,
-      "Kd_roll": 1.5
+      "Kp_roll": 4.512162535997526,
+      "Ki_roll": 0.32038102022047255,
+      "Kd_roll": 3.666076280399192
     }
   },
   {
     "generation": 27,
-    "best_fitness": 63.29035447441891,
-    "mean_fitness": 63.37101275688995,
+    "best_fitness": 106.9459574946872,
+    "mean_fitness": 106.94597217846754,
     "best_gains": {
-      "Kp_roll": 2.30751391129186,
-      "Ki_roll": 0.5,
-      "Kd_roll": 1.5
+      "Kp_roll": 4.512162535997526,
+      "Ki_roll": 0.32038102022047255,
+      "Kd_roll": 3.666076280399192
     }
   },
   {
     "generation": 28,
-    "best_fitness": 63.29035447441891,
-    "mean_fitness": 63.37101275688995,
+    "best_fitness": 106.9459574946872,
+    "mean_fitness": 106.94597217846754,
     "best_gains": {
-      "Kp_roll": 2.30751391129186,
-      "Ki_roll": 0.5,
-      "Kd_roll": 1.5
+      "Kp_roll": 4.512162535997526,
+      "Ki_roll": 0.32038102022047255,
+      "Kd_roll": 3.666076280399192
     }
   },
   {
     "generation": 29,
-    "best_fitness": 63.29035447441891,
-    "mean_fitness": 63.37101275688995,
+    "best_fitness": 106.9459574946872,
+    "mean_fitness": 106.94597217846754,
     "best_gains": {
-      "Kp_roll": 2.30751391129186,
-      "Ki_roll": 0.5,
-      "Kd_roll": 1.5
-    }
-  },
-  {
-    "generation": 30,
-    "best_fitness": 63.29035447441891,
-    "mean_fitness": 63.37101275688995,
-    "best_gains": {
-      "Kp_roll": 2.30751391129186,
-      "Ki_roll": 0.5,
-      "Kd_roll": 1.5
-    }
-  },
-  {
-    "generation": 31,
-    "best_fitness": 63.29035447441891,
-    "mean_fitness": 63.3707756829054,
-    "best_gains": {
-      "Kp_roll": 2.30751391129186,
-      "Ki_roll": 0.5,
-      "Kd_roll": 1.5
-    }
-  },
-  {
-    "generation": 32,
-    "best_fitness": 63.29035447441891,
-    "mean_fitness": 63.36892978687483,
-    "best_gains": {
-      "Kp_roll": 2.30751391129186,
-      "Ki_roll": 0.5,
-      "Kd_roll": 1.5
-    }
-  },
-  {
-    "generation": 33,
-    "best_fitness": 63.29035447441891,
-    "mean_fitness": 63.36892978687483,
-    "best_gains": {
-      "Kp_roll": 2.30751391129186,
-      "Ki_roll": 0.5,
-      "Kd_roll": 1.5
-    }
-  },
-  {
-    "generation": 34,
-    "best_fitness": 63.29035447441891,
-    "mean_fitness": 63.368721398183155,
-    "best_gains": {
-      "Kp_roll": 2.30751391129186,
-      "Ki_roll": 0.5,
-      "Kd_roll": 1.5
-    }
-  },
-  {
-    "generation": 35,
-    "best_fitness": 63.29035447441891,
-    "mean_fitness": 63.36284694991768,
-    "best_gains": {
-      "Kp_roll": 2.30751391129186,
-      "Ki_roll": 0.5,
-      "Kd_roll": 1.5
-    }
-  },
-  {
-    "generation": 36,
-    "best_fitness": 63.29035447441891,
-    "mean_fitness": 63.36082679358708,
-    "best_gains": {
-      "Kp_roll": 2.30751391129186,
-      "Ki_roll": 0.5,
-      "Kd_roll": 1.5
-    }
-  },
-  {
-    "generation": 37,
-    "best_fitness": 63.29035447441891,
-    "mean_fitness": 63.36082679358708,
-    "best_gains": {
-      "Kp_roll": 2.30751391129186,
-      "Ki_roll": 0.5,
-      "Kd_roll": 1.5
-    }
-  },
-  {
-    "generation": 38,
-    "best_fitness": 63.29035447441891,
-    "mean_fitness": 63.36082679358708,
-    "best_gains": {
-      "Kp_roll": 2.30751391129186,
-      "Ki_roll": 0.5,
-      "Kd_roll": 1.5
-    }
-  },
-  {
-    "generation": 39,
-    "best_fitness": 63.29035447441891,
-    "mean_fitness": 63.36082679358708,
-    "best_gains": {
-      "Kp_roll": 2.30751391129186,
-      "Ki_roll": 0.5,
-      "Kd_roll": 1.5
-    }
-  },
-  {
-    "generation": 40,
-    "best_fitness": 63.29035447441891,
-    "mean_fitness": 63.36082679358708,
-    "best_gains": {
-      "Kp_roll": 2.30751391129186,
-      "Ki_roll": 0.5,
-      "Kd_roll": 1.5
-    }
-  },
-  {
-    "generation": 41,
-    "best_fitness": 63.29035447441891,
-    "mean_fitness": 63.35648708864439,
-    "best_gains": {
-      "Kp_roll": 2.30751391129186,
-      "Ki_roll": 0.5,
-      "Kd_roll": 1.5
-    }
-  },
-  {
-    "generation": 42,
-    "best_fitness": 63.29035447441891,
-    "mean_fitness": 63.35648708864439,
-    "best_gains": {
-      "Kp_roll": 2.30751391129186,
-      "Ki_roll": 0.5,
-      "Kd_roll": 1.5
-    }
-  },
-  {
-    "generation": 43,
-    "best_fitness": 63.29035447441891,
-    "mean_fitness": 63.35634960420077,
-    "best_gains": {
-      "Kp_roll": 2.30751391129186,
-      "Ki_roll": 0.5,
-      "Kd_roll": 1.5
-    }
-  },
-  {
-    "generation": 44,
-    "best_fitness": 63.29035447441891,
-    "mean_fitness": 63.35634960420077,
-    "best_gains": {
-      "Kp_roll": 2.30751391129186,
-      "Ki_roll": 0.5,
-      "Kd_roll": 1.5
-    }
-  },
-  {
-    "generation": 45,
-    "best_fitness": 63.29035447441891,
-    "mean_fitness": 63.35634960420077,
-    "best_gains": {
-      "Kp_roll": 2.30751391129186,
-      "Ki_roll": 0.5,
-      "Kd_roll": 1.5
-    }
-  },
-  {
-    "generation": 46,
-    "best_fitness": 63.29035447441891,
-    "mean_fitness": 63.35634960420077,
-    "best_gains": {
-      "Kp_roll": 2.30751391129186,
-      "Ki_roll": 0.5,
-      "Kd_roll": 1.5
-    }
-  },
-  {
-    "generation": 47,
-    "best_fitness": 63.29035447441891,
-    "mean_fitness": 63.35634960420077,
-    "best_gains": {
-      "Kp_roll": 2.30751391129186,
-      "Ki_roll": 0.5,
-      "Kd_roll": 1.5
-    }
-  },
-  {
-    "generation": 48,
-    "best_fitness": 63.29035447441891,
-    "mean_fitness": 63.33603241443363,
-    "best_gains": {
-      "Kp_roll": 2.30751391129186,
-      "Ki_roll": 0.5,
-      "Kd_roll": 1.5
-    }
-  },
-  {
-    "generation": 49,
-    "best_fitness": 63.184291469973516,
-    "mean_fitness": 63.30719973015143,
-    "best_gains": {
-      "Kp_roll": 1.719149937731581,
-      "Ki_roll": 0.31718318699682757,
-      "Kd_roll": 1.4411143314220127
-    }
-  },
-  {
-    "generation": 50,
-    "best_fitness": 63.184291469973516,
-    "mean_fitness": 63.30719973015143,
-    "best_gains": {
-      "Kp_roll": 1.719149937731581,
-      "Ki_roll": 0.31718318699682757,
-      "Kd_roll": 1.4411143314220127
-    }
-  },
-  {
-    "generation": 51,
-    "best_fitness": 63.184291469973516,
-    "mean_fitness": 63.30719973015143,
-    "best_gains": {
-      "Kp_roll": 1.719149937731581,
-      "Ki_roll": 0.31718318699682757,
-      "Kd_roll": 1.4411143314220127
-    }
-  },
-  {
-    "generation": 52,
-    "best_fitness": 63.184291469973516,
-    "mean_fitness": 63.30719973015143,
-    "best_gains": {
-      "Kp_roll": 1.719149937731581,
-      "Ki_roll": 0.31718318699682757,
-      "Kd_roll": 1.4411143314220127
-    }
-  },
-  {
-    "generation": 53,
-    "best_fitness": 63.184291469973516,
-    "mean_fitness": 63.30719973015143,
-    "best_gains": {
-      "Kp_roll": 1.719149937731581,
-      "Ki_roll": 0.31718318699682757,
-      "Kd_roll": 1.4411143314220127
-    }
-  },
-  {
-    "generation": 54,
-    "best_fitness": 63.184291469973516,
-    "mean_fitness": 63.30705656763191,
-    "best_gains": {
-      "Kp_roll": 1.719149937731581,
-      "Ki_roll": 0.31718318699682757,
-      "Kd_roll": 1.4411143314220127
-    }
-  },
-  {
-    "generation": 55,
-    "best_fitness": 63.184291469973516,
-    "mean_fitness": 63.30705656763191,
-    "best_gains": {
-      "Kp_roll": 1.719149937731581,
-      "Ki_roll": 0.31718318699682757,
-      "Kd_roll": 1.4411143314220127
-    }
-  },
-  {
-    "generation": 56,
-    "best_fitness": 63.184291469973516,
-    "mean_fitness": 63.30705656763191,
-    "best_gains": {
-      "Kp_roll": 1.719149937731581,
-      "Ki_roll": 0.31718318699682757,
-      "Kd_roll": 1.4411143314220127
-    }
-  },
-  {
-    "generation": 57,
-    "best_fitness": 63.184291469973516,
-    "mean_fitness": 63.30705656763191,
-    "best_gains": {
-      "Kp_roll": 1.719149937731581,
-      "Ki_roll": 0.31718318699682757,
-      "Kd_roll": 1.4411143314220127
-    }
-  },
-  {
-    "generation": 58,
-    "best_fitness": 63.184291469973516,
-    "mean_fitness": 63.30705656763191,
-    "best_gains": {
-      "Kp_roll": 1.719149937731581,
-      "Ki_roll": 0.31718318699682757,
-      "Kd_roll": 1.4411143314220127
-    }
-  },
-  {
-    "generation": 59,
-    "best_fitness": 63.184291469973516,
-    "mean_fitness": 63.30664083180907,
-    "best_gains": {
-      "Kp_roll": 1.719149937731581,
-      "Ki_roll": 0.31718318699682757,
-      "Kd_roll": 1.4411143314220127
+      "Kp_roll": 4.512162535997526,
+      "Ki_roll": 0.32038102022047255,
+      "Kd_roll": 3.666076280399192
     }
   }
 ]

@@ -57,7 +57,7 @@ class MCResult:
 
 def _run_one(args):
     """Module-level worker for parallel execution."""
-    (run_id, seed, gains_kp, gains_ki, gains_kd, unc_dict) = args
+    (run_id, seed, gains_dict, unc_dict) = args
     rng = np.random.RandomState(seed)
     u = UncertaintyParameters(**unc_dict)
 
@@ -83,7 +83,17 @@ def _run_one(args):
 
     launch_pitch = 85.0 + rng.normal(0, u.launch_angle_std)
 
-    ctrl = CanardController(Kp_roll=gains_kp, Ki_roll=gains_ki, Kd_roll=gains_kd)
+    ctrl = CanardController(
+        Kp_roll=gains_dict.get('Kp_roll', 0.5),
+        Ki_roll=gains_dict.get('Ki_roll', 0.0),
+        Kd_roll=gains_dict.get('Kd_roll', 0.2),
+        Kp_pitch=gains_dict.get('Kp_pitch', 0.0),
+        Ki_pitch=gains_dict.get('Ki_pitch', 0.0),
+        Kd_pitch=gains_dict.get('Kd_pitch', 0.0),
+        Kp_yaw=gains_dict.get('Kp_yaw', 0.0),
+        Ki_yaw=gains_dict.get('Ki_yaw', 0.0),
+        Kd_yaw=gains_dict.get('Kd_yaw', 0.0),
+    )
 
     try:
         sim = RocketSimulator(rocket=rocket, motor=motor, wind=wind, controller=ctrl)
@@ -94,8 +104,12 @@ def _run_one(args):
         pos = result['position']
         landing_dist = float(np.sqrt(pos[-1, 0]**2 + pos[-1, 1]**2))
         rms_burn = result.get('roll_rms_burn', result['roll_rms'])
+        pitch_burn = result.get('pitch_rms_burn', 0.0)
+        has_pitch_ctrl = gains_dict.get('Kp_pitch', 0.0) > 0.01
 
-        ok = (result['max_altitude'] > 20 and rms_burn < 15)
+        ok = result['max_altitude'] > 20 and rms_burn < 15.0
+        if has_pitch_ctrl:
+            ok = ok and pitch_burn < 30.0
 
         return MCResult(
             run_id=run_id,
@@ -125,20 +139,19 @@ def _run_one(args):
 class MonteCarloAnalysis:
 
     def __init__(self, gains=None, uncertainty=None, num_workers=None):
-        g = gains or {'Kp_roll': 0.5, 'Ki_roll': 0.0, 'Kd_roll': 0.2}
-        self.Kp = g.get('Kp_roll', 0.5)
-        self.Ki = g.get('Ki_roll', 0.0)
-        self.Kd = g.get('Kd_roll', 0.2)
+        g = dict(gains or {'Kp_roll': 0.5, 'Ki_roll': 0.0, 'Kd_roll': 0.2})
+        self.gains = g
         self.uncertainty = uncertainty or UncertaintyParameters()
         self.num_workers = num_workers
         self.results: List[MCResult] = []
+        self._last_elapsed = 0.0
 
     def run_analysis(self, num_runs=1000, base_seed=42):
         print(f"Monte Carlo: {num_runs} runs, workers={self.num_workers or 'serial'}",
               flush=True)
         unc_d = asdict(self.uncertainty)
         args_list = [
-            (i, base_seed + i, self.Kp, self.Ki, self.Kd, unc_d)
+            (i, base_seed + i, self.gains, unc_d)
             for i in range(num_runs)
         ]
 
@@ -162,6 +175,7 @@ class MonteCarloAnalysis:
                     print(f"  [{i+1}/{num_runs}] success={sr*100:.1f}%", flush=True)
 
         elapsed = time.time() - t0
+        self._last_elapsed = elapsed
         return self.compute_statistics(elapsed)
 
     def compute_statistics(self, elapsed=0.0):
@@ -219,8 +233,8 @@ class MonteCarloAnalysis:
 
     def save_results(self, path):
         data = {
-            'summary': self.compute_statistics(),
-            'gains': {'Kp_roll': self.Kp, 'Ki_roll': self.Ki, 'Kd_roll': self.Kd},
+            'summary': self.compute_statistics(self._last_elapsed),
+            'gains': self.gains,
             'uncertainty': asdict(self.uncertainty),
             'runs': [asdict(r) for r in self.results],
         }
@@ -249,8 +263,7 @@ def main():
     print("=" * 60, flush=True)
     print("Monte Carlo Trajectory Analysis", flush=True)
     print("=" * 60, flush=True)
-    print(f"Gains: Kp={gains.get('Kp_roll')}, Ki={gains.get('Ki_roll')}, "
-          f"Kd={gains.get('Kd_roll')}", flush=True)
+    print(f"Gains: {gains}", flush=True)
 
     mc = MonteCarloAnalysis(gains=gains, num_workers=args.workers)
     stats = mc.run_analysis(num_runs=args.runs, base_seed=args.seed)

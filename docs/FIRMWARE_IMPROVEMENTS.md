@@ -35,9 +35,9 @@ this is small, but the EKF also filters high-frequency noise and provides
 pitch/yaw estimates needed for future 3-axis control.
 
 ### Implementation
-The EKF is implemented in `attitude_ekf.h` as a single header file, generated
-from the Python reference implementation in `Simulation/src/kalman_filter.py`.
-The two implementations are numerically identical.
+The EKF is implemented in `Firmware/Rocket/src/attitude_ekf.h` as a single header
+(included by `main_improved.cpp`). `getGyroBiasX()` exposes the X gyro bias in
+deg/s for telemetry and the D-term.
 
 ---
 
@@ -55,9 +55,16 @@ The D-term uses the gyro rate directly (with bias removed by the EKF), not
 differentiation — a deliberate design choice inherited from V4.
 
 ### Gain Derivation
-Default gains (Kp=0.65, Ki=0.05, Kd=0.28) were found via differential
-evolution optimisation on a 6-DOF simulation, minimising roll RMS during the
-motor burn phase across wind conditions of 0–5 m/s. See `docs/SIMULATION.md`.
+Default gains (Kp=0.65, Ki=0.05, Kd=0.28) were found via simulation-based search.
+See `docs/SIMULATION.md` and `Simulation/results/best_gains.json` for cluster runs.
+
+### Serial commands
+- **`PID,Kp,Kd`** — V4-compatible (sets Ki=0).
+- **`PID,Kp,Ki,Kd`** — full three-term set (V5).
+
+### Battery telemetry (optional)
+GPIO **36** (ADC1) with a 100k:100k divider can report bus voltage in extended
+telemetry (`readBatteryVoltage()`). Define `BATTERY_ADC_PIN` to `-1` to disable.
 
 ---
 
@@ -85,8 +92,9 @@ dashboard without modification.
 
 ### V5 Extended Mode
 ```
-DATA,roll,pitch,yaw,offset,state,Kp,Kd,biasX
+DATA,roll,pitch,yaw,offset,state,Kp,Kd,biasX,Vbatt
 ```
+(`Vbatt` in volts; 0 if ADC disabled.)
 Activated by sending `TELEMETRY_V5` command. Returns to V4 format with
 `TELEMETRY_V4`.
 
@@ -98,7 +106,7 @@ V5 is a drop-in replacement for V4:
 - Same pin assignments
 - Same serial protocol
 - Same default telemetry format
-- Same command set (ARM, IGNITE, CALIBRATE, PID)
+- Same command set (ARM, IGNITE, CALIBRATE, PID with optional Ki)
 - Added commands (DISARM, TELEMETRY_V5, TELEMETRY_V4) are additive
 
 The launcher firmware does not need to be modified.

@@ -5,7 +5,7 @@ Canard-stabilized rocket with folding fins.
 
 Physical system modeled:
 - ~200g airframe with 4 canard surfaces in '+' configuration
-- All canards deflect identically for roll-only control
+- Differential mixing: roll + pitch + yaw commands (firmware may use roll-only)
 - Folding tail fins provide passive pitch/yaw stability
 - C-class solid motor (~10 N*s total impulse)
 - MPU6050 IMU sampled at 200 Hz, ESP32 flight computer
@@ -26,45 +26,74 @@ except ImportError:
 
 @dataclass
 class RocketParameters:
-    """Physical parameters derived from CAD and OpenRocket analysis."""
+    """Physical parameters from Barrowman sweep of improved design.
+
+    Improved design (candidate #1 from design_sweep.py):
+      Von Karman nose 120mm, body 549mm (75mm OD), boat tail 30mm,
+      4x folding fins 60mm span / 70mm root chord / 30deg sweep,
+      4x canards 20mm span / 45mm root chord at 100mm from nose.
+    Barrowman predictions: CNa=8.21, CP=430mm, stability=1.06 cal, Cd0=0.64.
+    """
     mass: float = 0.200
-    length: float = 0.30
-    diameter: float = 0.04
+    length: float = 0.669          # m (120mm nose + 549mm body)
+    diameter: float = 0.075        # m (75 mm OD)
 
-    Ixx: float = 0.00005   # kg*m^2 roll (thin cylinder)
-    Iyy: float = 0.0015    # kg*m^2 pitch
-    Izz: float = 0.0015    # kg*m^2 yaw
+    Ixx: float = 0.00014          # kg*m^2 roll  (m*r^2/2)
+    Iyy: float = 0.0074           # kg*m^2 pitch (m*L^2/12 = 0.2*0.669^2/12)
+    Izz: float = 0.0074           # kg*m^2 yaw
 
-    cg_from_nose: float = 0.18
-    cp_from_nose: float = 0.22  # 2cm stability margin (1.0 cal)
+    cg_from_nose: float = 0.35    # m (assembly heavy aft, unchanged)
+    cp_from_nose: float = 0.430   # m (Barrowman: 429.5mm)
 
-    canard_area: float = 0.0006   # m^2 per canard (~20x30mm)
-    canard_arm: float = 0.04      # m, moment arm from body axis to canard lift centre
+    nose_length: float = 0.120    # m (120mm Von Karman, up from 38mm)
+    body_length: float = 0.549    # m (unchanged)
+
+    # Planform ~20 mm span x 45 mm chord (sweep winner)
+    canard_area: float = 0.0009   # m^2 per canard
+    canard_arm: float = 0.0475    # m, body radius + half canard span (20 mm)
+    canard_from_nose: float = 0.10  # m from nose tip (100 mm)
     num_canards: int = 4
     canard_max_deflection: float = 12.0
-    canard_Cla: float = 3.0       # per-radian lift slope for a small flat plate
+    canard_Cla: float = 3.5       # improved AR gives better lift slope
 
-    fin_area: float = 0.001
-    reference_area: float = 0.00126  # pi * (0.02)^2
+    fin_area: float = 0.00315     # m^2 per fin (70mm x 90mm avg span area)
+    fin_from_nose: float = 0.59   # m, near aft end
+    num_fins: int = 4
+    reference_area: float = 0.00442  # m^2, pi * (0.0375)^2
 
-    Cd0: float = 0.45
-    Cd_canard: float = 0.005  # incremental drag per degree deflection
-    CNa: float = 8.0          # normal force slope of full rocket (per radian)
+    Cd0: float = 0.64             # Barrowman estimate (improved nose)
+    Cd_canard: float = 0.005      # incremental drag per degree deflection
+    CNa: float = 8.2              # Barrowman: 8.21 /rad
 
-    Clp: float = -0.08        # roll damping from fins (dimensionless)
-    Cmq: float = -8.0         # pitch damping coefficient
-    Cnr: float = -8.0         # yaw damping coefficient
+    Clp: float = -0.15            # larger fins = more roll damping
+    Cmq: float = -12.0            # larger fins = more pitch damping
+    Cnr: float = -12.0            # larger fins = more yaw damping
+
+    @property
+    def canard_pitch_arm(self) -> float:
+        """Moment arm (m) from canard normal force to CG along body x."""
+        return max(0.01, self.cg_from_nose - self.canard_from_nose)
 
 
 @dataclass
 class MotorProfile:
-    """Solid rocket motor thrust profile."""
+    """Solid rocket motor thrust profile (scaled so time-integral = total_impulse)."""
     burn_time: float = 1.2
     total_impulse: float = 10.0
     peak_thrust: float = 15.0
     propellant_mass: float = 0.020
+    _thrust_scale: float = field(default=1.0, repr=False, init=False)
 
-    def thrust(self, t: float) -> float:
+    def __post_init__(self):
+        ramp, tail = 0.02, 0.05
+        plateau = max(self.burn_time - ramp - tail, 0.0)
+        raw_integral = self.peak_thrust * (0.5 * ramp + plateau + 0.5 * tail)
+        if raw_integral > 1e-9:
+            object.__setattr__(self, '_thrust_scale', self.total_impulse / raw_integral)
+        else:
+            object.__setattr__(self, '_thrust_scale', 1.0)
+
+    def _thrust_unscaled(self, t: float) -> float:
         if t < 0 or t > self.burn_time:
             return 0.0
         ramp = 0.02
@@ -73,6 +102,9 @@ class MotorProfile:
         if t > self.burn_time - 0.05:
             return self.peak_thrust * ((self.burn_time - t) / 0.05)
         return self.peak_thrust
+
+    def thrust(self, t: float) -> float:
+        return self._thrust_unscaled(t) * self._thrust_scale
 
     def mass_flow(self, t: float) -> float:
         if 0 <= t <= self.burn_time:
@@ -158,34 +190,84 @@ class RocketState:
         return s
 
 
+def mix_canards(roll_cmd: float, pitch_cmd: float, yaw_cmd: float,
+                max_abs: float) -> np.ndarray:
+    """Map roll/pitch/yaw surface commands (deg) to [L,R,U,D] deflections."""
+    d = np.array([
+        roll_cmd - pitch_cmd + yaw_cmd,
+        roll_cmd - pitch_cmd - yaw_cmd,
+        roll_cmd + pitch_cmd - yaw_cmd,
+        roll_cmd + pitch_cmd + yaw_cmd,
+    ], dtype=float)
+    m = np.max(np.abs(d))
+    if m > max_abs and m > 1e-9:
+        d *= max_abs / m
+    return d
+
+
+def _wrap_deg(err: float) -> float:
+    while err > 180.0:
+        err -= 360.0
+    while err < -180.0:
+        err += 360.0
+    return err
+
+
 class CanardController:
     """
-    Roll-only PD controller matching the original firmware.
-    output = Kp * roll_angle + Kd * roll_rate
-    Applied identically to all 4 canards.
+    PID on roll, pitch, yaw with D-term from body angular rates (deg/s),
+    matching firmware convention for roll. Outputs [L,R,U,D] via mix_canards.
+    Set pitch/yaw gains to zero for roll-only behaviour.
     """
 
-    def __init__(self, Kp_roll=0.5, Ki_roll=0.0, Kd_roll=0.2, **_kwargs):
-        self.Kp = Kp_roll
-        self.Ki = Ki_roll
-        self.Kd = Kd_roll
-        self.integral = 0.0
+    def __init__(
+        self,
+        Kp_roll=0.5, Ki_roll=0.0, Kd_roll=0.2,
+        Kp_pitch=0.0, Ki_pitch=0.0, Kd_pitch=0.0,
+        Kp_yaw=0.0, Ki_yaw=0.0, Kd_yaw=0.0,
+        **_kwargs,
+    ):
+        self.Kp_r = Kp_roll
+        self.Ki_r = Ki_roll
+        self.Kd_r = Kd_roll
+        self.Kp_p = Kp_pitch
+        self.Ki_p = Ki_pitch
+        self.Kd_p = Kd_pitch
+        self.Kp_y = Kp_yaw
+        self.Ki_y = Ki_yaw
+        self.Kd_y = Kd_yaw
+        self.ir = self.ip = self.iy = 0.0
         self.integral_limit = 15.0
 
-    def compute(self, state: RocketState, _target, dt: float,
-                max_deflection: float = 12.0) -> np.ndarray:
-        roll_deg = state.euler_angles()[0]
-        roll_rate_deg = state.angular_velocity[0] * 180.0 / np.pi
-
-        self.integral += roll_deg * dt
-        self.integral = np.clip(self.integral, -self.integral_limit, self.integral_limit)
-
-        output = self.Kp * roll_deg + self.Ki * self.integral + self.Kd * roll_rate_deg
-        deflection = np.clip(output, -max_deflection, max_deflection)
-        return np.full(4, deflection)
-
     def reset(self):
-        self.integral = 0.0
+        self.ir = self.ip = self.iy = 0.0
+
+    def compute(self, state: RocketState, target_deg: np.ndarray, dt: float,
+                max_deflection: float = 12.0) -> np.ndarray:
+        roll_deg, pitch_deg, yaw_deg = state.euler_angles()
+        p, q, r = state.angular_velocity
+        roll_rate_deg = p * 180.0 / np.pi
+        pitch_rate_deg = q * 180.0 / np.pi
+        yaw_rate_deg = r * 180.0 / np.pi
+
+        tr, tp, ty = float(target_deg[0]), float(target_deg[1]), float(target_deg[2])
+        e_r = _wrap_deg(roll_deg - tr)
+        e_p = _wrap_deg(pitch_deg - tp)
+        e_y = _wrap_deg(yaw_deg - ty)
+
+        self.ir += e_r * dt
+        self.ip += e_p * dt
+        self.iy += e_y * dt
+        lim = self.integral_limit
+        self.ir = float(np.clip(self.ir, -lim, lim))
+        self.ip = float(np.clip(self.ip, -lim, lim))
+        self.iy = float(np.clip(self.iy, -lim, lim))
+
+        r_cmd = self.Kp_r * e_r + self.Ki_r * self.ir + self.Kd_r * roll_rate_deg
+        p_cmd = self.Kp_p * e_p + self.Ki_p * self.ip + self.Kd_p * pitch_rate_deg
+        y_cmd = self.Kp_y * e_y + self.Ki_y * self.iy + self.Kd_y * yaw_rate_deg
+
+        return mix_canards(r_cmd, p_cmd, y_cmd, max_deflection)
 
 
 class RocketSimulator:
@@ -203,8 +285,10 @@ class RocketSimulator:
         self.dt = 0.005
         self.history = []
         self.canard_deflections = np.zeros(4)
+        self._launch_pitch = 85.0
 
     def reset(self, initial_state=None, launch_pitch=85.0):
+        self._launch_pitch = float(launch_pitch)
         if initial_state:
             self.state = initial_state
         else:
@@ -265,11 +349,15 @@ class RocketSimulator:
         F_N_alpha = q_bar * S * rk.CNa * alpha
         F_N_beta = q_bar * S * rk.CNa * beta
 
-        # --- Canard forces ---
-        # All 4 canards deflect identically; each produces lift perpendicular
-        # to body x-axis, offset from the roll axis by canard_arm.
-        defl_rad = np.radians(canard_defl[0])  # all identical
-        F_canard_per = q_bar * rk.canard_area * rk.canard_Cla * defl_rad
+        # --- Canard control (differential [L,R,U,D], deg) ---
+        dL, dR, dU, dD = [float(x) for x in canard_defl[:4]]
+        dr = np.pi / 180.0
+        qSc = q_bar * rk.canard_area * rk.canard_Cla * dr
+        arm_r = rk.canard_arm
+        arm_p = rk.canard_pitch_arm
+        M_roll_canard = arm_r * qSc * (dL - dR + dD - dU)
+        M_pitch_canard = arm_p * qSc * (dU + dD - dL - dR)
+        M_yaw_canard = arm_r * qSc * (dL - dR - dU + dD)
 
         # --- Thrust ---
         thrust = self.motor.thrust(t)
@@ -287,14 +375,13 @@ class RocketSimulator:
         p_r, q_r, r_r = state.angular_velocity
         nondim = d / (2 * max(V, 0.5))
 
-        # Pitch/yaw restoring + damping
-        M_pitch = -q_bar * S * L * (rk.CNa * stability_margin / L * alpha + rk.Cmq * nondim * q_r)
-        M_yaw   = q_bar * S * L * (rk.CNa * stability_margin / L * beta + rk.Cnr * nondim * r_r)
+        # Pitch/yaw restoring + damping + canard control
+        M_pitch = (-q_bar * S * L * (rk.CNa * stability_margin / L * alpha + rk.Cmq * nondim * q_r)
+                   + M_pitch_canard)
+        M_yaw = (q_bar * S * L * (rk.CNa * stability_margin / L * beta + rk.Cnr * nondim * r_r)
+                 + M_yaw_canard)
 
-        # Roll: canard torque + fin damping
-        M_roll_canard = rk.num_canards * F_canard_per * rk.canard_arm
         M_roll_damp = q_bar * S * d * rk.Clp * nondim * p_r
-
         M_body = np.array([
             M_roll_canard + M_roll_damp,
             M_pitch,
@@ -339,7 +426,9 @@ class RocketSimulator:
     # ------------------------------------------------------------------
     def step(self, dt, target_attitude=None):
         if target_attitude is None:
-            target_attitude = np.zeros(3)
+            target_attitude = np.array([0.0, self._launch_pitch, 0.0])
+        else:
+            target_attitude = np.asarray(target_attitude, dtype=float).reshape(3)
         self.dt = dt
 
         self.canard_deflections = self.controller.compute(
@@ -398,6 +487,10 @@ class RocketSimulator:
 
         roll_all = euler[:, 0]
         roll_burn = roll_all[burn_mask] if np.any(burn_mask) else roll_all
+        pitch_all = euler[:, 1]
+        pitch_burn = pitch_all[burn_mask] if np.any(burn_mask) else pitch_all
+        lp = getattr(self, '_launch_pitch', 85.0)
+        pitch_err_burn = pitch_burn - lp
 
         return {
             'time': times,
@@ -414,6 +507,7 @@ class RocketSimulator:
             'max_speed': float(np.max(speeds)),
             'roll_rms': float(np.sqrt(np.mean(roll_all**2))),
             'roll_rms_burn': float(np.sqrt(np.mean(roll_burn**2))),
+            'pitch_rms_burn': float(np.sqrt(np.mean(pitch_err_burn ** 2))),
             'burn_time': float(self.motor.burn_time),
         }
 
@@ -427,6 +521,12 @@ def evaluate_controller(gains: dict, wind_speed=0.0, num_runs=1, seed=None):
         Kp_roll=gains.get('Kp_roll', 0.5),
         Ki_roll=gains.get('Ki_roll', 0.0),
         Kd_roll=gains.get('Kd_roll', 0.2),
+        Kp_pitch=gains.get('Kp_pitch', 0.0),
+        Ki_pitch=gains.get('Ki_pitch', 0.0),
+        Kd_pitch=gains.get('Kd_pitch', 0.0),
+        Kp_yaw=gains.get('Kp_yaw', 0.0),
+        Ki_yaw=gains.get('Ki_yaw', 0.0),
+        Kd_yaw=gains.get('Kd_yaw', 0.0),
     )
 
     wind = WindModel(
@@ -445,6 +545,7 @@ def evaluate_controller(gains: dict, wind_speed=0.0, num_runs=1, seed=None):
         'max_altitude': float(np.mean([r['max_altitude'] for r in results])),
         'roll_rms': float(np.mean([r['roll_rms'] for r in results])),
         'roll_rms_burn': float(np.mean([r['roll_rms_burn'] for r in results])),
+        'pitch_rms_burn': float(np.mean([r.get('pitch_rms_burn', 0.0) for r in results])),
         'flight_time': float(np.mean([r['flight_time'] for r in results])),
     }
 
