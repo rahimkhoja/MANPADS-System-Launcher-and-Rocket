@@ -22,11 +22,50 @@ module load StdEnv/2023
 module load openfoam/v2412
 module load scipy-stack/2024a
 
-REPO_ROOT="$(cd "$SLURM_SUBMIT_DIR/../.." && pwd)"
-cd "$SLURM_SUBMIT_DIR/.."
+WORK_DIR="${SLURM_SUBMIT_DIR:-$(pwd)}"
 
-STL="${1:-${REPO_ROOT}/cad/rocket_assembly.stl}"
-RESULTS_DIR="results/cfd_baseline_${SLURM_JOB_ID}"
+resolve_stl_path() {
+    local candidate="${1}"
+    if [ -f "$candidate" ]; then
+        echo "$candidate"
+        return
+    fi
+
+    local search_paths=(
+        "$candidate"
+        "$WORK_DIR/$candidate"
+        "$WORK_DIR/../$candidate"
+        "$WORK_DIR/../../$candidate"
+        "$candidate"
+    )
+
+    for p in "${search_paths[@]}"; do
+        if [ -f "$p" ]; then
+            echo "$p"
+            return
+        fi
+    done
+}
+
+STL_CANDIDATE="${1:-cad/rocket_assembly.stl}"
+STL="$(resolve_stl_path "$STL_CANDIDATE")"
+
+# Infer repository root from where the STL lives, then fallback to submit directory layout.
+REPO_ROOT=""
+if [[ "$STL" == */cad/* ]]; then
+    REPO_ROOT="${STL%/cad/*}"
+elif [[ "$STL" == */Simulation/* ]]; then
+    REPO_ROOT="${STL%/Simulation/*}"
+elif [ -d "$WORK_DIR/../Simulation" ]; then
+    REPO_ROOT="$(cd "$WORK_DIR/.." && pwd)"
+elif [ -d "$WORK_DIR/../../Simulation" ]; then
+    REPO_ROOT="$(cd "$WORK_DIR/../.." && pwd)"
+else
+    REPO_ROOT="$(cd "$WORK_DIR" && pwd)"
+fi
+
+cd "$REPO_ROOT/Simulation"
+RESULTS_DIR="$REPO_ROOT/Simulation/results/cfd_baseline_${SLURM_JOB_ID}"
 mkdir -p "$RESULTS_DIR"
 
 echo "=== Rocket CFD Sweep ==="
