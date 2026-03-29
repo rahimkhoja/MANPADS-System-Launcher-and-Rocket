@@ -1,0 +1,26 @@
+/var/spool/slurmd/job02022/slurm_script: 6: module: not found
+Rocket 6-DOF Simulator
+==================================================
+GPU Available: False
+
+Flight Results:
+  Max Altitude: 147.1 m
+  Apogee Time: 5.43 s
+  Max Speed: 64.7 m/s
+  Flight Time: 8.00 s
+  Roll RMS: 0.00°
+  Pitch RMS: 67.96°
+  Stability Score: 32.0
+---
+Testing Attitude EKF
+==================================================
+EKF RMS Error: 0.357 deg
+CF RMS Error: 2.014 deg
+Raw Gyro RMS Error: 3.383 deg
+
+Estimated Gyro Bias: [ 0.51661121 -1.12858322  0.33277504] deg/s
+True Gyro Bias: [ 0.5729578  -1.14591559  0.2864789 ] deg/s
+
+==================================================
+Generating C++ implementation...
+Saved to attitude_ekf.h
