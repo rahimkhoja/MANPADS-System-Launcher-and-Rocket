@@ -1,0 +1,10 @@
+Starting parallel PID optimization...
+============================================================
+PID Gain Optimizer for Canard-Stabilized Rocket
+============================================================
+GPU Available: False
+Wind speeds: [0.0, 3.0]
+Runs per config: 1
+DE Optimization: 20 generations, pop=16
+Evaluating initial population...
+Done!

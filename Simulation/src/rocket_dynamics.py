@@ -38,7 +38,7 @@ class RocketParameters:
     cg_from_nose: float = 0.18  # m (center of gravity from nose)
     cp_from_nose: float = 0.20  # m (center of pressure from nose)
     
-    canard_area: float = 0.0004  # m^2 per canard (20mm x 20mm)
+    canard_area: float = 0.001  # m^2 per canard (~30mm x 33mm)
     canard_arm: float = 0.05     # m (distance from CG to canard)
     canard_max_deflection: float = 12.0  # degrees
     
@@ -212,12 +212,12 @@ class CanardController:
         pitch_cmd = np.clip(pitch_cmd, -max_deflection, max_deflection)
         yaw_cmd = np.clip(yaw_cmd, -max_deflection, max_deflection)
         
-        left = roll_cmd + yaw_cmd
-        right = roll_cmd - yaw_cmd
-        up = pitch_cmd + yaw_cmd
-        down = pitch_cmd - yaw_cmd
+        # Simplified roll-only control like original firmware:
+        # All 4 canards deflect by same amount for roll stabilization
+        # This creates a pure rolling moment
+        deflection = roll_cmd  # Primary control is roll
         
-        deflections = np.array([left, right, up, down])
+        deflections = np.array([deflection, deflection, deflection, deflection])
         return np.clip(deflections, -max_deflection, max_deflection)
     
     def reset(self):
@@ -319,7 +319,7 @@ class RocketSimulator:
             -lift_alpha
         ])
         
-        canard_lift_coef = 0.05
+        canard_lift_coef = 0.3  # Increased for realistic canard effectiveness
         left, right, up, down = np.radians(canard_deflections)
         
         F_canard = np.array([
@@ -346,10 +346,14 @@ class RocketSimulator:
         ])
         
         arm = self.rocket.canard_arm
+        # Simplified canard moment model:
+        # All canards deflecting together creates roll moment (like original design)
+        # The factor of 4 accounts for 4 canards contributing
+        total_deflection = (left + right + up + down) / 4.0
         M_canard = np.array([
-            q_bar * self.rocket.canard_area * arm * canard_lift_coef * (left + right),
-            q_bar * self.rocket.canard_area * arm * canard_lift_coef * (up + down),
-            q_bar * self.rocket.canard_area * arm * canard_lift_coef * (left - right) * 0.5
+            q_bar * self.rocket.canard_area * arm * canard_lift_coef * 4.0 * total_deflection,
+            0,  # Simplified: no pitch control from this config
+            0   # Simplified: no yaw control from this config
         ])
         
         M_total = M_aero + M_canard

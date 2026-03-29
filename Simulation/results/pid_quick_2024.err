@@ -1,0 +1,2 @@
+/var/spool/slurmd/job02024/slurm_script: 7: module: not found
+[2026-03-29T00:24:10.976] error: *** JOB 2024 ON eureka4 CANCELLED AT 2026-03-29T00:24:10 DUE to SIGNAL Terminated ***

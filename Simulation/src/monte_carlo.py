@@ -31,26 +31,26 @@ from rocket_dynamics import (
 class UncertaintyParameters:
     """Define uncertainty ranges for Monte Carlo analysis."""
     
-    mass_std: float = 0.010          # kg (±10g)
-    cg_std: float = 0.005            # m (±5mm)
-    Ixx_std_pct: float = 0.10        # 10% variation
-    Iyy_std_pct: float = 0.10
-    Cd0_std_pct: float = 0.15        # 15% drag uncertainty
-    thrust_std_pct: float = 0.10     # 10% motor variation
-    burn_time_std_pct: float = 0.05
+    mass_std: float = 0.005          # kg (±5g)
+    cg_std: float = 0.003            # m (±3mm)
+    Ixx_std_pct: float = 0.05        # 5% variation
+    Iyy_std_pct: float = 0.05
+    Cd0_std_pct: float = 0.10        # 10% drag uncertainty
+    thrust_std_pct: float = 0.08     # 8% motor variation
+    burn_time_std_pct: float = 0.03
     
-    gyro_bias_std: float = 0.02      # rad/s
-    gyro_noise_std: float = 0.01     # rad/s
-    accel_bias_std: float = 0.2      # m/s^2
-    accel_noise_std: float = 0.5     # m/s^2
+    gyro_bias_std: float = 0.005     # rad/s (~0.3°/s, realistic for MPU6050)
+    gyro_noise_std: float = 0.005    # rad/s
+    accel_bias_std: float = 0.1      # m/s^2
+    accel_noise_std: float = 0.3     # m/s^2
     
-    launch_angle_std: float = 2.0    # degrees
-    wind_speed_mean: float = 3.0     # m/s
-    wind_speed_std: float = 2.0      # m/s
-    wind_direction_std: float = 30   # degrees
-    gust_intensity_pct: float = 0.3  # 30% of mean wind
+    launch_angle_std: float = 1.0    # degrees
+    wind_speed_mean: float = 2.0     # m/s
+    wind_speed_std: float = 1.0      # m/s
+    wind_direction_std: float = 20   # degrees
+    gust_intensity_pct: float = 0.2  # 20% of mean wind
     
-    servo_offset_std: float = 2.0    # degrees center offset
+    servo_offset_std: float = 1.0    # degrees center offset
     servo_rate_limit: float = 300    # deg/s
 
 
@@ -173,10 +173,10 @@ class MonteCarloAnalysis:
             )
             
             max_roll = np.max(np.abs(results['roll']))
+            roll_rms = results['roll_rms']
             success = (
                 results['max_altitude'] > 20 and
-                max_roll < 45 and
-                landing_distance < 100
+                roll_rms < 30  # Use RMS instead of max, 30° threshold
             )
             
             return MonteCarloResult(

@@ -1,0 +1,63 @@
+Running Monte Carlo Analysis with optimized gains...
+Controller Gains:
+  Kp_roll: 1.4707834065554943
+  Ki_roll: 0.5
+  Kd_roll: 0.3065861650922979
+  Kp_pitch: 1.7359082046587857
+  Ki_pitch: 0.5
+  Kd_pitch: 0.5193702538796756
+Starting Monte Carlo Analysis: 500 runs
+Workers: 16
+  [100/500] Success rate: 3.0%
+  [200/500] Success rate: 2.0%
+  [300/500] Success rate: 2.0%
+  [400/500] Success rate: 1.5%
+  [500/500] Success rate: 1.4%
+
+============================================================
+MONTE CARLO ANALYSIS SUMMARY
+============================================================
+Total Runs: 500
+Successful: 7 (1.4%)
+Time: 0.0s
+
+--- Performance Metrics (successful flights) ---
+
+max_altitude:
+  Mean: 137.50 m
+  Std:  19.16 m
+  Range: [99.28, 158.99] m
+  90% CI: [106.80, 157.07] m
+
+flight_time:
+  Mean: 11.22 s
+  Std:  0.78 s
+  Range: [9.62, 12.02] s
+  90% CI: [9.95, 11.98] s
+
+max_speed:
+  Mean: 59.70 m/s
+  Std:  8.70 m/s
+  Range: [44.26, 71.58] m/s
+  90% CI: [46.47, 70.67] m/s
+
+roll_rms:
+  Mean: 0.00 °
+  Std:  0.00 °
+  Range: [0.00, 0.00] °
+  90% CI: [0.00, 0.00] °
+
+landing_distance:
+  Mean: 71.94 m
+  Std:  21.31 m
+  Range: [35.51, 99.51] m
+  90% CI: [39.21, 96.91] m
+
+stability_score:
+  Mean: -5.17 
+  Std:  1.54 
+  Range: [-6.97, -2.36] 
+  90% CI: [-6.96, -2.94] 
+
+Results saved to: ../results/monte_carlo_results.json
+Monte Carlo complete!

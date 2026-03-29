@@ -34,6 +34,9 @@ source "${VENV_DIR}/bin/activate"
 pip install --no-index --upgrade pip
 pip install cupy-cuda12x 2>/dev/null || echo "CuPy not available, using NumPy"
 
+# Ensure unbuffered Python output
+export PYTHONUNBUFFERED=1
+
 # Navigate to source directory
 cd "${SLURM_SUBMIT_DIR}/../src"
 
@@ -45,7 +48,7 @@ echo ""
 echo "Running Differential Evolution Optimization..."
 echo ""
 
-python pid_optimizer.py \
+python -u pid_optimizer.py \
     --method de \
     --wind-speeds 0 2 5 8 \
     --num-runs 5 \

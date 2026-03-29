@@ -1,0 +1,31 @@
+Starting parallel PID optimization...
+============================================================
+PID Gain Optimizer for Canard-Stabilized Rocket
+============================================================
+GPU Available: False
+Wind speeds: [0.0, 3.0]
+Runs per config: 1
+DE Optimization: 20 generations, pop=16
+Evaluating initial population...
+Initial best: 207.109
+  Gen 5: best=207.109, mean=245.056
+  Gen 10: best=207.109, mean=234.702
+  Gen 15: best=207.109, mean=223.815
+  Gen 20: best=202.626, mean=219.724
+
+============================================================
+OPTIMIZATION COMPLETE
+============================================================
+Time: 165.4 seconds
+Best Score: 202.6263
+Best Gains:
+  Kp_roll: 1.4708
+  Ki_roll: 0.5000
+  Kd_roll: 0.3066
+  Kp_pitch: 1.7359
+  Ki_pitch: 0.5000
+  Kd_pitch: 0.5194
+
+Results saved to: ../results/optimization_results_de.json
+Best gains saved to: ../results/best_gains.json
+Optimization complete!

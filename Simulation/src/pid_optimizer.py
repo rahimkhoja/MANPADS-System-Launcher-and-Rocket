@@ -26,6 +26,24 @@ from rocket_dynamics import (
     RocketParameters, MotorProfile, evaluate_controller
 )
 
+# Module-level function for multiprocessing pickling
+def _eval_gains_worker(args):
+    """Worker function for parallel gain evaluation."""
+    gains_tuple, wind_speeds, num_runs = args
+    param_names, values = gains_tuple
+    gains = dict(zip(param_names, values))
+    
+    total_score = 0
+    for wind in wind_speeds:
+        results = evaluate_controller(gains, wind_speed=wind, num_runs=num_runs)
+        roll_penalty = results['roll_rms'] * 2.0
+        pitch_penalty = results['pitch_rms'] * 1.5
+        altitude_bonus = -results['max_altitude'] * 0.1
+        stability_bonus = -results['stability_score'] * 0.5
+        total_score += roll_penalty + pitch_penalty + altitude_bonus + stability_bonus
+    
+    return total_score / len(wind_speeds)
+
 
 class PIDOptimizer:
     """Optimize PID gains using grid search or evolutionary algorithms."""
@@ -137,7 +155,7 @@ class PIDOptimizer:
                                mutation_factor: float = 0.8,
                                crossover_prob: float = 0.7) -> Tuple[dict, float]:
         """
-        Differential Evolution optimization.
+        Differential Evolution optimization with parallel evaluation.
         More efficient for continuous parameter spaces.
         
         param_bounds: {
@@ -155,19 +173,31 @@ class PIDOptimizer:
             size=(population_size, n_params)
         )
         
-        fitness = np.array([
-            self.objective_function(dict(zip(param_names, ind)))
-            for ind in population
-        ])
+        # Parallel initial fitness evaluation
+        print(f"DE Optimization: {generations} generations, pop={population_size}", flush=True)
+        print(f"Evaluating initial population...", flush=True)
+        
+        def make_args(ind):
+            return ((param_names, tuple(ind)), self.wind_speeds, self.num_runs)
+        
+        if self.num_workers and self.num_workers > 1:
+            args_list = [make_args(ind) for ind in population]
+            with ProcessPoolExecutor(max_workers=self.num_workers) as executor:
+                fitness = np.array(list(executor.map(_eval_gains_worker, args_list)))
+        else:
+            fitness = np.array([self.objective_function(dict(zip(param_names, ind))) for ind in population])
         
         best_idx = np.argmin(fitness)
         best_individual = population[best_idx].copy()
         best_fitness = fitness[best_idx]
         
-        print(f"DE Optimization: {generations} generations, pop={population_size}")
-        print(f"Initial best: {best_fitness:.3f}")
+        print(f"Initial best: {best_fitness:.3f}", flush=True)
         
         for gen in range(generations):
+            # Generate all trial vectors first
+            trials = []
+            trial_indices = []
+            
             for i in range(population_size):
                 candidates = [j for j in range(population_size) if j != i]
                 a, b, c = population[np.random.choice(candidates, 3, replace=False)]
@@ -180,11 +210,19 @@ class PIDOptimizer:
                     crossover[np.random.randint(n_params)] = True
                 
                 trial = np.where(crossover, mutant, population[i])
-                
-                trial_fitness = self.objective_function(
-                    dict(zip(param_names, trial))
-                )
-                
+                trials.append(trial)
+                trial_indices.append(i)
+            
+            # Parallel trial evaluation
+            if self.num_workers and self.num_workers > 1:
+                args_list = [make_args(t) for t in trials]
+                with ProcessPoolExecutor(max_workers=self.num_workers) as executor:
+                    trial_fitness_list = list(executor.map(_eval_gains_worker, args_list))
+            else:
+                trial_fitness_list = [self.objective_function(dict(zip(param_names, t))) for t in trials]
+            
+            # Update population with better individuals
+            for i, (trial, trial_fitness) in enumerate(zip(trials, trial_fitness_list)):
                 if trial_fitness < fitness[i]:
                     population[i] = trial
                     fitness[i] = trial_fitness
@@ -193,9 +231,9 @@ class PIDOptimizer:
                         best_fitness = trial_fitness
                         best_individual = trial.copy()
             
-            if (gen + 1) % 10 == 0:
+            if (gen + 1) % 5 == 0:
                 print(f"  Gen {gen+1}: best={best_fitness:.3f}, "
-                      f"mean={np.mean(fitness):.3f}")
+                      f"mean={np.mean(fitness):.3f}", flush=True)
                 
             self.results_history.append({
                 'generation': gen,

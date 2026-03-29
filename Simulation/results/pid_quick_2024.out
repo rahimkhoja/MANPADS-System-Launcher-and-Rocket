@@ -1,0 +1,9 @@
+Starting quick PID optimization test...
+============================================================
+PID Gain Optimizer for Canard-Stabilized Rocket
+============================================================
+GPU Available: False
+Wind speeds: [0.0, 3.0]
+Runs per config: 2
+DE Optimization: 30 generations, pop=20
+Initial best: 208.847
