@@ -1,0 +1,43 @@
+==========================================
+PID Roll-Gain Optimizer
+Date: Sun Mar 29 01:31:51 UTC 2026
+Node: eureka1
+Job:  2029
+CPUs: 16
+==========================================
+
+--- Differential Evolution ---
+============================================================
+PID Roll-Gain Optimizer — Canard-Stabilized Rocket
+============================================================
+Wind speeds: [0.0, 2.0, 5.0] m/s
+Runs per config per wind: 2
+Workers: 16
+DE: pop=40, gen=60, F=0.7, CR=0.8
+  Init best: 63.771  {'Kp_roll': 0.5298306047661309, 'Ki_roll': 0.2479970105282035, 'Kd_roll': 0.8557034703520547}
+  Gen   1: best=63.607  mean=66.545  {'Kp_roll': 1.5416834713714485, 'Ki_roll': 0.14812233624394755, 'Kd_roll': 1.5}
+  Gen   5: best=63.356  mean=63.609  {'Kp_roll': 2.0915973595160255, 'Ki_roll': 0.07810671975031129, 'Kd_roll': 1.5}
+  Gen  10: best=63.356  mean=63.483  {'Kp_roll': 2.0915973595160255, 'Ki_roll': 0.07810671975031129, 'Kd_roll': 1.5}
+  Gen  15: best=63.356  mean=63.467  {'Kp_roll': 2.0915973595160255, 'Ki_roll': 0.07810671975031129, 'Kd_roll': 1.5}
+  Gen  20: best=63.356  mean=63.463  {'Kp_roll': 2.0915973595160255, 'Ki_roll': 0.07810671975031129, 'Kd_roll': 1.5}
+  Gen  25: best=63.356  mean=63.454  {'Kp_roll': 2.0915973595160255, 'Ki_roll': 0.07810671975031129, 'Kd_roll': 1.5}
+  Gen  30: best=63.290  mean=63.371  {'Kp_roll': 2.30751391129186, 'Ki_roll': 0.5, 'Kd_roll': 1.5}
+  Gen  35: best=63.290  mean=63.369  {'Kp_roll': 2.30751391129186, 'Ki_roll': 0.5, 'Kd_roll': 1.5}
+  Gen  40: best=63.290  mean=63.361  {'Kp_roll': 2.30751391129186, 'Ki_roll': 0.5, 'Kd_roll': 1.5}
+  Gen  45: best=63.290  mean=63.356  {'Kp_roll': 2.30751391129186, 'Ki_roll': 0.5, 'Kd_roll': 1.5}
+  Gen  50: best=63.184  mean=63.307  {'Kp_roll': 1.719149937731581, 'Ki_roll': 0.31718318699682757, 'Kd_roll': 1.4411143314220127}
+  Gen  55: best=63.184  mean=63.307  {'Kp_roll': 1.719149937731581, 'Ki_roll': 0.31718318699682757, 'Kd_roll': 1.4411143314220127}
+  Gen  60: best=63.184  mean=63.307  {'Kp_roll': 1.719149937731581, 'Ki_roll': 0.31718318699682757, 'Kd_roll': 1.4411143314220127}
+
+============================================================
+OPTIMIZATION COMPLETE
+Elapsed: 2715.7s
+Best roll_rms_burn: 63.1843°
+  Kp_roll: 1.7191
+  Ki_roll: 0.3172
+  Kd_roll: 1.4411
+Results saved to /home/clg_98da5933b7a1/MANPADS-System-Launcher-and-Rocket/Simulation/jobs/../results/
+
+==========================================
+Completed: Sun Mar 29 02:17:19 UTC 2026
+==========================================

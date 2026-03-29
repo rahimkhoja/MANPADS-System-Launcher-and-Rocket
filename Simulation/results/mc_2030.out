@@ -1,0 +1,53 @@
+==========================================
+Monte Carlo Trajectory Analysis
+Date: Sun Mar 29 02:22:08 UTC 2026
+Node: eureka1
+Job:  2030
+CPUs: 16
+==========================================
+Using optimized gains from: /home/clg_98da5933b7a1/MANPADS-System-Launcher-and-Rocket/Simulation/jobs/../results/best_gains.json
+
+============================================================
+Monte Carlo Trajectory Analysis
+============================================================
+Gains: Kp=1.719149937731581, Ki=0.31718318699682757, Kd=1.4411143314220127
+Monte Carlo: 2000 runs, workers=16
+  [200/2000] success=9.5%
+  [400/2000] success=10.0%
+  [600/2000] success=10.2%
+  [800/2000] success=10.8%
+  [1000/2000] success=10.8%
+  [1200/2000] success=10.7%
+  [1400/2000] success=10.3%
+  [1600/2000] success=10.5%
+  [1800/2000] success=10.5%
+  [2000/2000] success=10.4%
+
+============================================================
+MONTE CARLO SUMMARY
+============================================================
+Total: 2000  Success: 208 (10.4%)  Time: 376.8s
+
+  max_altitude:
+    mean=212.98m  std=29.22  90%CI=[169.68, 260.08]
+
+  roll_rms_burn:
+    mean=0.00°  std=0.00  90%CI=[0.00, 0.00]
+
+  roll_rms:
+    mean=34.05°  std=27.40  90%CI=[0.00, 68.95]
+
+  max_speed:
+    mean=68.36m/s  std=6.51  90%CI=[58.22, 78.36]
+
+  flight_time:
+    mean=11.99s  std=0.11  90%CI=[12.00, 12.00]
+
+  landing_distance:
+    mean=74.19m  std=15.87  90%CI=[49.49, 97.75]
+
+Saved: /home/clg_98da5933b7a1/MANPADS-System-Launcher-and-Rocket/Simulation/jobs/../results/monte_carlo_results.json
+
+==========================================
+Completed: Sun Mar 29 02:28:37 UTC 2026
+==========================================

@@ -1,0 +1,99 @@
+==========================================
+Quick Validation (< 2 min)
+Date: Sun Mar 29 01:28:17 UTC 2026
+Node: eureka2
+==========================================
+
+--- 1. Dynamics smoke test ---
+Rocket 6-DOF Simulator
+==================================================
+GPU Available: False
+
+--- No wind ---
+  Max Altitude: 213.2 m
+  Max Speed:    68.3 m/s
+  Roll RMS:     24.47°  (burn: 0.00°)
+  Apogee Time:  6.82 s
+
+--- 3 m/s crosswind ---
+  Max Altitude: 203.2 m
+  Roll RMS:     102.84°  (burn: 94.78°)
+
+--- 2. Tiny grid search (9 combos) ---
+============================================================
+PID Roll-Gain Optimizer — Canard-Stabilized Rocket
+============================================================
+Wind speeds: [0.0, 3.0] m/s
+Runs per config per wind: 1
+Workers: serial
+Grid search: 27 combinations
+Best grid: score=46.471  {'Kp_roll': 2.0, 'Ki_roll': 0.3, 'Kd_roll': 0.8}
+
+============================================================
+OPTIMIZATION COMPLETE
+Elapsed: 64.5s
+Best roll_rms_burn: 46.4712°
+  Kp_roll: 2.0000
+  Ki_roll: 0.3000
+  Kd_roll: 0.8000
+Results saved to /tmp/rocket_val/
+
+--- 3. Mini Monte Carlo (20 runs) ---
+============================================================
+Monte Carlo Trajectory Analysis
+============================================================
+Gains: Kp=0.5, Ki=0.0, Kd=0.2
+Monte Carlo: 20 runs, workers=serial
+  [2/20] success=0.0%
+  [4/20] success=0.0%
+  [6/20] success=0.0%
+  [8/20] success=0.0%
+  [10/20] success=0.0%
+  [12/20] success=8.3%
+  [14/20] success=7.1%
+  [16/20] success=6.2%
+  [18/20] success=5.6%
+  [20/20] success=5.0%
+
+============================================================
+MONTE CARLO SUMMARY
+============================================================
+Total: 20  Success: 1 (5.0%)  Time: 30.1s
+
+  max_altitude:
+    mean=192.74m  std=0.00  90%CI=[192.74, 192.74]
+
+  roll_rms_burn:
+    mean=0.00°  std=0.00  90%CI=[0.00, 0.00]
+
+  roll_rms:
+    mean=50.78°  std=0.00  90%CI=[50.78, 50.78]
+
+  max_speed:
+    mean=65.40m/s  std=0.00  90%CI=[65.40, 65.40]
+
+  flight_time:
+    mean=12.00s  std=0.00  90%CI=[12.00, 12.00]
+
+  landing_distance:
+    mean=74.03m  std=0.00  90%CI=[74.03, 74.03]
+
+Saved: /tmp/rocket_val/monte_carlo_results.json
+
+--- 4. Kalman filter generation ---
+Testing Attitude EKF
+==================================================
+EKF RMS Error: 0.406 deg
+CF RMS Error: 2.054 deg
+Raw Gyro RMS Error: 3.227 deg
+
+Estimated Gyro Bias: [ 0.62729918 -1.10488891  0.31089055] deg/s
+True Gyro Bias: [ 0.5729578  -1.14591559  0.2864789 ] deg/s
+
+==================================================
+Generating C++ implementation...
+Saved to attitude_ekf.h
+
+==========================================
+VALIDATION PASSED: Sun Mar 29 01:30:09 UTC 2026
+==========================================
