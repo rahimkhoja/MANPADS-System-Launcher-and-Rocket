@@ -259,11 +259,12 @@ def generate_rocket(nose_shape: str = "ogive",
                     canard_sweep: float = 0.0,
                     canard_thickness: float = 0.001,
                     canard_position: float = None,
-                    n_circ: int = 32) -> "trimesh.Trimesh":
+                    n_circ: int = 32,
+                    return_parts: bool = False):
     """Generate a complete rocket STL from parametric inputs.
 
     The rocket is oriented along +Z with nose tip at the top.
-    Returns a single concatenated trimesh.
+    Returns a single concatenated trimesh, or a list of parts if return_parts.
 
     All dimensions in metres.
     """
@@ -301,6 +302,11 @@ def generate_rocket(nose_shape: str = "ogive",
                                canard_span, canard_sweep, canard_thickness,
                                body_radius, canard_position)
         parts.append(canards)
+
+    if return_parts:
+        for p in parts:
+            p.fix_normals()
+        return parts
 
     rocket = trimesh.util.concatenate(parts)
     rocket.fix_normals()
