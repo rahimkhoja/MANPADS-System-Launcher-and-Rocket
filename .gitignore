@@ -47,6 +47,8 @@ Simulation/jobs/results/*.out
 Simulation/jobs/results/*.err
 Simulation/results/cfd_baseline_*/
 Simulation/results/cfd_baseline/
+Simulation/results/canard_sweep_*/
+Simulation/results/mesh_study_*/
 Simulation/results/mc_*.out
 Simulation/results/mc_*.err
 Simulation/results/pid_*.out

@@ -44,8 +44,8 @@ functions
         lRef            __LREF__;
         Aref            __AREF__;
         CofR            (0 0 0);
-        liftDir         (0 1 0);
-        dragDir         (1 0 0);
+        liftDir         (__LIFTDIR__);
+        dragDir         (__DRAGDIR__);
         pitchAxis       (0 0 1);
     }
 

@@ -18,6 +18,10 @@
 #include <ESP32Servo.h>
 #include "attitude_ekf.h"
 
+#ifdef ENABLE_RL_POLICY
+#include "rl_policy.h"
+#endif
+
 // ============== PIN DEFINITIONS (matches V4) ==============
 const int RX2_PIN = 16;
 const int TX2_PIN = 17;
@@ -68,12 +72,16 @@ AttitudeEKF ekf;
 enum SystemState { IDLE, ARMED, IGNITING, FLIGHT, RECOVERY };
 SystemState sysState = IDLE;
 
+enum ControlMode { PID_MODE, RL_MODE };
+ControlMode controlMode = PID_MODE;
+
 String cmdBuffer = "";
 
 // Control variables
 float rollIntegral = 0;
 int lastServoOffset = 0;
 float physical_skew_angle = 0.0f;
+float rlCanards[4] = {0, 0, 0, 0};
 
 // Timing
 unsigned long lastTime;
@@ -95,6 +103,7 @@ bool extendedTelemetry = false;
 void calibrateSensors();
 void resetController();
 void setAllCanards(int offset);
+void setCanardsIndividual(float left, float right, float up, float down);
 
 // ============== SETUP ==============
 void setup() {
@@ -175,17 +184,57 @@ void loop() {
         break;
 
     case FLIGHT: {
-        // PID: P on angle, I on angle, D on gyro rate (not d(error)/dt)
-        rollIntegral += rollDeg * dt;
-        rollIntegral = constrain(rollIntegral, -integralLimit, integralLimit);
+#ifdef ENABLE_RL_POLICY
+        if (controlMode == RL_MODE) {
+            float pitch = ekf.getPitchDeg();
+            float yaw = ekf.getYawDeg();
+            float pitchRateDeg = (gyro.gyro.y) * RAD_TO_DEG;
+            float yawRateDeg = (gyro.gyro.z) * RAD_TO_DEG;
+            float speed = sqrtf(accel.acceleration.x * accel.acceleration.x +
+                                accel.acceleration.y * accel.acceleration.y +
+                                accel.acceleration.z * accel.acceleration.z);
 
-        float output = Kp * rollDeg + Ki * rollIntegral + Kd * rollRateDeg;
-        int offset = constrain((int)output, -MAX_DEFLECTION, MAX_DEFLECTION);
-        setAllCanards(offset);
-        lastServoOffset = offset;
+            float rlState[RL_STATE_DIM] = {
+                rollDeg / 45.0f,
+                (pitch - 85.0f) / 45.0f,
+                yaw / 45.0f,
+                (gyro.gyro.x) / 5.0f,
+                (gyro.gyro.y) / 5.0f,
+                (gyro.gyro.z) / 5.0f,
+                0.0f, 0.0f, 0.0f,
+                0.0f,
+                (millis() - flightStartTime) / 10000.0f,
+                (millis() - flightStartTime < 1200) ? 1.0f : 0.0f
+            };
 
-        // Apogee detection: axial accel < 0.5 g for > 500 ms
-        float axialAccel = accel.acceleration.x;  // along body x-axis
+            rl_policy_forward(rlState, rlCanards);
+
+            bool rl_safe = (fabsf(rollDeg) < 45.0f) && (fabsf(pitch - 85.0f) < 45.0f);
+            for (int i = 0; i < 4; i++) {
+                if (fabsf(rlCanards[i]) > MAX_DEFLECTION) rl_safe = false;
+            }
+
+            if (rl_safe) {
+                setCanardsIndividual(rlCanards[0], rlCanards[1], rlCanards[2], rlCanards[3]);
+                lastServoOffset = (int)rlCanards[0];
+            } else {
+                controlMode = PID_MODE;
+                Serial2.println("RL_FALLBACK:PID");
+            }
+        }
+#endif
+
+        if (controlMode == PID_MODE) {
+            rollIntegral += rollDeg * dt;
+            rollIntegral = constrain(rollIntegral, -integralLimit, integralLimit);
+
+            float output = Kp * rollDeg + Ki * rollIntegral + Kd * rollRateDeg;
+            int offset = constrain((int)output, -MAX_DEFLECTION, MAX_DEFLECTION);
+            setAllCanards(offset);
+            lastServoOffset = offset;
+        }
+
+        float axialAccel = accel.acceleration.x;
         if (fabsf(axialAccel) < LOW_G_THRESHOLD) {
             if (lowGStartTime == 0) lowGStartTime = millis();
             if (millis() - lowGStartTime > APOGEE_HOLD_MS) {
@@ -294,6 +343,18 @@ void loop() {
                 extendedTelemetry = false;
                 Serial2.println("ACK:TELEMETRY_V4");
             }
+            else if (cmdBuffer == "MODE_RL") {
+#ifdef ENABLE_RL_POLICY
+                controlMode = RL_MODE;
+                Serial2.println("ACK:MODE_RL");
+#else
+                Serial2.println("ERR:RL_NOT_COMPILED");
+#endif
+            }
+            else if (cmdBuffer == "MODE_PID") {
+                controlMode = PID_MODE;
+                Serial2.println("ACK:MODE_PID");
+            }
             cmdBuffer = "";
         } else if (c != '\r') {
             cmdBuffer += c;
@@ -308,6 +369,13 @@ void setAllCanards(int offset) {
     rightServo.write(RIGHT_CENTER + offset);
     upServo.write(UP_CENTER + offset);
     downServo.write(DOWN_CENTER + offset);
+}
+
+void setCanardsIndividual(float left, float right, float up, float down) {
+    leftServo.write(LEFT_CENTER + constrain((int)left, -MAX_DEFLECTION, MAX_DEFLECTION));
+    rightServo.write(RIGHT_CENTER + constrain((int)right, -MAX_DEFLECTION, MAX_DEFLECTION));
+    upServo.write(UP_CENTER + constrain((int)up, -MAX_DEFLECTION, MAX_DEFLECTION));
+    downServo.write(DOWN_CENTER + constrain((int)down, -MAX_DEFLECTION, MAX_DEFLECTION));
 }
 
 void calibrateSensors() {

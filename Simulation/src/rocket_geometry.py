@@ -221,14 +221,28 @@ def _extrude_quad(pts_2d: np.ndarray, thickness: float) -> "trimesh.Trimesh":
 
 def make_fin_set(count: int, root_chord: float, tip_chord: float,
                  span: float, sweep_angle_deg: float, thickness: float,
-                 body_radius: float, z_position: float) -> "trimesh.Trimesh":
-    """Generate a set of fins equally spaced around the body."""
+                 body_radius: float, z_position: float,
+                 deflection_deg: float = 0.0) -> "trimesh.Trimesh":
+    """Generate a set of fins equally spaced around the body.
+
+    deflection_deg rotates each fin about its hinge axis (tangent to body
+    surface at the fin root, i.e. the body-axis Z direction at the fin's
+    azimuthal position). Positive deflection tilts the fin tip in the +Z
+    (nose) direction. All fins deflect identically.
+    """
     meshes = []
     for i in range(count):
-        angle = 2 * math.pi * i / count
+        azimuth = 2 * math.pi * i / count
         fin = _make_single_fin(root_chord, tip_chord, span,
                                sweep_angle_deg, thickness, body_radius)
-        R = trimesh.transformations.rotation_matrix(angle, [0, 0, 1])
+        if abs(deflection_deg) > 0.01:
+            hinge_pt = np.array([0.0, body_radius, 0.0])
+            hinge_axis = np.array([0.0, 0.0, 1.0])
+            T = trimesh.transformations.rotation_matrix(
+                math.radians(deflection_deg), hinge_axis, hinge_pt)
+            fin.apply_transform(T)
+
+        R = trimesh.transformations.rotation_matrix(azimuth, [0, 0, 1])
         fin.apply_transform(R)
         fin.apply_translation([0, 0, z_position])
         meshes.append(fin)
@@ -337,7 +351,8 @@ def generate_rocket(nose_shape: str = "ogive",
                     canard_position: float = None,
                     n_circ: int = 32,
                     return_parts: bool = False,
-                    rail_buttons: bool = False):
+                    rail_buttons: bool = False,
+                    canard_deflection_deg: float = 0.0):
     """Generate a complete rocket STL from parametric inputs.
 
     The rocket is oriented along +Z with nose tip at the top.
@@ -350,34 +365,31 @@ def generate_rocket(nose_shape: str = "ogive",
 
     total_length = nose_length + body_length
     if fin_position is None:
-        fin_position = 0.02  # near aft end
+        fin_position = 0.02
     if canard_position is None:
         canard_position = total_length - nose_length - 0.05
 
     parts = []
 
-    # Nose cone, positioned at top
     nose = make_nose_cone(nose_shape, nose_length, body_radius, n_circ=n_circ)
     nose.apply_translation([0, 0, body_length])
     parts.append(nose)
 
-    # Body tube
     body = make_body_tube(body_length, body_radius, boat_tail,
                           bt_length, bt_end_radius, n_circ=n_circ)
     parts.append(body)
 
-    # Tail fins
     if fin_count > 0 and fin_span > 0.001:
         fins = make_fin_set(fin_count, fin_root, fin_tip, fin_span,
                             fin_sweep, fin_thickness, body_radius,
                             fin_position)
         parts.append(fins)
 
-    # Canards
     if canard_count > 0 and canard_span > 0.001:
         canards = make_fin_set(canard_count, canard_root, canard_tip,
                                canard_span, canard_sweep, canard_thickness,
-                               body_radius, canard_position)
+                               body_radius, canard_position,
+                               deflection_deg=canard_deflection_deg)
         parts.append(canards)
 
     if rail_buttons:

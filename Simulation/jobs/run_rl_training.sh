@@ -2,7 +2,7 @@
 #SBATCH --job-name=rocket-rl
 #SBATCH --output=../results/rl_%j.out
 #SBATCH --error=../results/rl_%j.err
-#SBATCH --time=04:00:00
+#SBATCH --time=08:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=32
@@ -42,7 +42,7 @@ python -u -c "import torch; print(f'CUDA: {torch.cuda.is_available()}, Device: c
 
 echo ""
 CUDA_VISIBLE_DEVICES="" python -u rl_controller.py \
-    --timesteps 2000000 \
+    --timesteps 5000000 \
     --eval-episodes 100 \
     --export-cpp \
     --output-dir "${RESULTS_DIR}"

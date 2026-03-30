@@ -69,6 +69,8 @@ class RocketParameters:
     Cmq: float = -12.0            # larger fins = more pitch damping
     Cnr: float = -12.0            # larger fins = more yaw damping
 
+    aero_table: object = field(default=None, repr=False)
+
     @property
     def canard_pitch_arm(self) -> float:
         """Moment arm (m) from canard normal force to CG along body x."""
@@ -341,13 +343,24 @@ class RocketSimulator:
 
         # --- Axial force (drag) ---
         avg_defl = np.mean(np.abs(canard_defl))
-        Cd = rk.Cd0 + rk.Cd_canard * avg_defl
+        alpha_deg = np.degrees(alpha)
+        beta_deg = np.degrees(beta)
+
+        if rk.aero_table is not None:
+            Cd = rk.aero_table.Cd(V, alpha_deg) + rk.Cd_canard * avg_defl
+            CNa_eff = rk.CNa
+            if abs(alpha_deg) > 0.1:
+                Cl_cfd = rk.aero_table.Cl(V, alpha_deg)
+                CNa_eff = Cl_cfd / alpha if abs(alpha) > 1e-6 else rk.CNa
+        else:
+            Cd = rk.Cd0 + rk.Cd_canard * avg_defl
+            CNa_eff = rk.CNa
+
         F_axial = -q_bar * S * Cd
 
-        # --- Normal force from body + fins (restoring) ---
         stability_margin = rk.cp_from_nose - rk.cg_from_nose
-        F_N_alpha = q_bar * S * rk.CNa * alpha
-        F_N_beta = q_bar * S * rk.CNa * beta
+        F_N_alpha = q_bar * S * CNa_eff * alpha
+        F_N_beta = q_bar * S * CNa_eff * beta
 
         # --- Canard control (differential [L,R,U,D], deg) ---
         dL, dR, dU, dD = [float(x) for x in canard_defl[:4]]
@@ -375,10 +388,9 @@ class RocketSimulator:
         p_r, q_r, r_r = state.angular_velocity
         nondim = d / (2 * max(V, 0.5))
 
-        # Pitch/yaw restoring + damping + canard control
-        M_pitch = (-q_bar * S * L * (rk.CNa * stability_margin / L * alpha + rk.Cmq * nondim * q_r)
+        M_pitch = (-q_bar * S * L * (CNa_eff * stability_margin / L * alpha + rk.Cmq * nondim * q_r)
                    + M_pitch_canard)
-        M_yaw = (q_bar * S * L * (rk.CNa * stability_margin / L * beta + rk.Cnr * nondim * r_r)
+        M_yaw = (q_bar * S * L * (CNa_eff * stability_margin / L * beta + rk.Cnr * nondim * r_r)
                  + M_yaw_canard)
 
         M_roll_damp = q_bar * S * d * rk.Clp * nondim * p_r

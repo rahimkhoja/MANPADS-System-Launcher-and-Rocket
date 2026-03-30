@@ -32,48 +32,50 @@ from rocket_dynamics import (
 if TORCH_AVAILABLE:
     
     class PolicyNetwork(nn.Module):
-        """Actor network for continuous control."""
-        
-        def __init__(self, state_dim: int = 12, action_dim: int = 4, 
-                     hidden_dim: int = 128):
+        """Actor network with LayerNorm for stable training."""
+
+        def __init__(self, state_dim: int = 12, action_dim: int = 4,
+                     hidden_dim: int = 256):
             super().__init__()
-            
+
             self.shared = nn.Sequential(
                 nn.Linear(state_dim, hidden_dim),
+                nn.LayerNorm(hidden_dim),
                 nn.ReLU(),
                 nn.Linear(hidden_dim, hidden_dim),
+                nn.LayerNorm(hidden_dim),
                 nn.ReLU(),
             )
-            
+
             self.mean = nn.Sequential(
                 nn.Linear(hidden_dim, hidden_dim // 2),
                 nn.ReLU(),
                 nn.Linear(hidden_dim // 2, action_dim),
                 nn.Tanh()
             )
-            
+
             self.log_std = nn.Parameter(torch.zeros(action_dim))
-            
+
         def forward(self, state: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
             features = self.shared(state)
             mean = self.mean(features) * 12.0
-            std = torch.exp(self.log_std).expand_as(mean)
+            std = torch.exp(self.log_std.clamp(-2, 1)).expand_as(mean)
             return mean, std
-        
-        def get_action(self, state: torch.Tensor, 
+
+        def get_action(self, state: torch.Tensor,
                        deterministic: bool = False) -> Tuple[torch.Tensor, torch.Tensor]:
             mean, std = self.forward(state)
-            
+
             if deterministic:
                 return mean, torch.zeros_like(mean)
-            
+
             dist = Normal(mean, std)
             action = dist.sample()
             log_prob = dist.log_prob(action).sum(dim=-1)
-            
+
             return action, log_prob
-        
-        def evaluate(self, state: torch.Tensor, 
+
+        def evaluate(self, state: torch.Tensor,
                      action: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
             mean, std = self.forward(state)
             dist = Normal(mean, std)
@@ -83,47 +85,61 @@ if TORCH_AVAILABLE:
 
 
     class ValueNetwork(nn.Module):
-        """Critic network for state value estimation."""
-        
-        def __init__(self, state_dim: int = 12, hidden_dim: int = 128):
+        """Critic network with separate backbone."""
+
+        def __init__(self, state_dim: int = 12, hidden_dim: int = 256):
             super().__init__()
-            
+
             self.net = nn.Sequential(
                 nn.Linear(state_dim, hidden_dim),
+                nn.LayerNorm(hidden_dim),
                 nn.ReLU(),
                 nn.Linear(hidden_dim, hidden_dim),
+                nn.LayerNorm(hidden_dim),
                 nn.ReLU(),
                 nn.Linear(hidden_dim, 1)
             )
-            
+
         def forward(self, state: torch.Tensor) -> torch.Tensor:
             return self.net(state).squeeze(-1)
 
 
+    CURRICULUM_LEVELS = [
+        {'wind_range': (0, 1), 'launch_std': 0.5, 'unstable_limit': 45},
+        {'wind_range': (0, 4), 'launch_std': 1.0, 'unstable_limit': 50},
+        {'wind_range': (0, 8), 'launch_std': 2.0, 'unstable_limit': 60},
+    ]
+
     class RocketEnvironment:
-        """Gym-like environment wrapper for rocket simulation."""
-        
-        def __init__(self, 
+        """Gym-like environment with curriculum learning and shaped rewards."""
+
+        def __init__(self,
                      wind_speed_range: Tuple[float, float] = (0, 8),
                      episode_length: int = 2000,
-                     dt: float = 0.005):
-            
-            self.wind_speed_range = wind_speed_range
+                     dt: float = 0.005,
+                     difficulty: int = 0):
+
+            self.base_wind_range = wind_speed_range
             self.episode_length = episode_length
             self.dt = dt
-            
+            self.difficulty = min(difficulty, len(CURRICULUM_LEVELS) - 1)
+
             self.sim = None
             self.step_count = 0
             self.target_pitch = 85.0
-            
+            self._prev_altitude = 0.0
+
+        def set_difficulty(self, level: int):
+            self.difficulty = min(level, len(CURRICULUM_LEVELS) - 1)
+
         def reset(self, seed: int = None) -> np.ndarray:
-            """Reset environment and return initial state."""
             if seed is not None:
                 np.random.seed(seed)
-            
-            wind_speed = np.random.uniform(*self.wind_speed_range)
+
+            cur = CURRICULUM_LEVELS[self.difficulty]
+            wind_speed = np.random.uniform(*cur['wind_range'])
             wind_dir = np.random.uniform(0, 2 * np.pi)
-            
+
             wind = WindModel(
                 base_velocity=np.array([
                     wind_speed * np.cos(wind_dir),
@@ -132,31 +148,31 @@ if TORCH_AVAILABLE:
                 ]),
                 gust_intensity=wind_speed * 0.2
             )
-            
+
             class NullController:
                 def compute(self, state, target, dt, max_defl):
                     return np.zeros(4)
                 def reset(self):
                     pass
-            
+
             self.sim = RocketSimulator(
                 wind=wind,
                 controller=NullController()
             )
-            self.sim.reset()
-            
-            launch_angle = 85 + np.random.uniform(-2, 2)
+
+            launch_angle = 85 + np.random.normal(0, cur['launch_std'])
+            self.sim.reset(launch_pitch=launch_angle)
             self.target_pitch = launch_angle
-            
+
             self.step_count = 0
-            
+            self._prev_altitude = 0.0
+
             return self._get_state()
-        
+
         def _get_state(self) -> np.ndarray:
-            """Extract state vector for RL agent."""
             state = self.sim.state
             roll, pitch, yaw = state.euler_angles()
-            
+
             return np.array([
                 roll / 45.0,
                 (pitch - self.target_pitch) / 45.0,
@@ -171,81 +187,87 @@ if TORCH_AVAILABLE:
                 self.sim.time / 10.0,
                 float(self.sim.time < self.sim.motor.burn_time)
             ], dtype=np.float32)
-        
+
         def step(self, action: np.ndarray) -> Tuple[np.ndarray, float, bool, dict]:
-            """Take action and return (state, reward, done, info)."""
             action = np.clip(action, -12, 12)
             self.sim.canard_deflections = action
-            
+
             state_array = self.sim.state.to_array()
             k1 = self.sim.derivatives(state_array, self.sim.time, action)
-            k2 = self.sim.derivatives(state_array + 0.5*self.dt*k1, 
+            k2 = self.sim.derivatives(state_array + 0.5*self.dt*k1,
                                       self.sim.time + 0.5*self.dt, action)
-            k3 = self.sim.derivatives(state_array + 0.5*self.dt*k2, 
+            k3 = self.sim.derivatives(state_array + 0.5*self.dt*k2,
                                       self.sim.time + 0.5*self.dt, action)
-            k4 = self.sim.derivatives(state_array + self.dt*k3, 
+            k4 = self.sim.derivatives(state_array + self.dt*k3,
                                       self.sim.time + self.dt, action)
-            
+
             state_array += (self.dt/6) * (k1 + 2*k2 + 2*k3 + k4)
             self.sim.state = RocketState.from_array(state_array)
             self.sim.time += self.dt
             self.step_count += 1
-            
+
             roll, pitch, yaw = self.sim.state.euler_angles()
-            
+            altitude = -self.sim.state.position[2]
+            in_burn = self.sim.time < self.sim.motor.burn_time
+
             roll_error = abs(roll)
             pitch_error = abs(pitch - self.target_pitch)
             yaw_error = abs(yaw)
-            
-            attitude_reward = -0.01 * (roll_error + pitch_error + yaw_error)
-            
+
+            survival_bonus = 0.1
+
+            attitude_scale = 0.008 if in_burn else 0.003
+            attitude_penalty = -attitude_scale * (roll_error**2 + pitch_error**2 + yaw_error**2)
+
             angular_vel = self.sim.state.angular_velocity
-            rate_penalty = -0.001 * np.sum(np.abs(angular_vel))
-            
-            control_penalty = -0.0001 * np.sum(action**2)
-            
-            altitude = -self.sim.state.position[2]
-            altitude_reward = 0.001 * altitude if altitude > 0 else -1.0
-            
-            reward = attitude_reward + rate_penalty + control_penalty + altitude_reward
-            
+            rate_penalty = -0.0005 * np.sum(angular_vel**2)
+
+            control_penalty = -0.00001 * np.sum(action**2)
+
+            alt_gain = max(0, altitude - self._prev_altitude)
+            altitude_reward = 0.01 * altitude + 0.5 * alt_gain
+            self._prev_altitude = altitude
+
+            reward = survival_bonus + attitude_penalty + rate_penalty + control_penalty + altitude_reward
+
             done = False
+            cur = CURRICULUM_LEVELS[self.difficulty]
             info = {'altitude': altitude, 'roll': roll, 'pitch': pitch}
-            
-            if self.sim.state.position[2] > 0:
+
+            if self.sim.state.position[2] > 0 and self.step_count > 10:
                 done = True
-                reward -= 10.0
+                reward -= 5.0
                 info['termination'] = 'ground_hit'
-            
-            if roll_error > 60 or pitch_error > 60:
+
+            if roll_error > cur['unstable_limit'] or pitch_error > cur['unstable_limit']:
                 done = True
-                reward -= 20.0
+                reward -= 5.0
                 info['termination'] = 'unstable'
-            
+
             if self.step_count >= self.episode_length:
                 done = True
-                reward += 5.0
+                reward += 20.0
                 info['termination'] = 'timeout'
-            
+
             return self._get_state(), reward, done, info
 
 
     class PPOTrainer:
-        """Proximal Policy Optimization trainer."""
-        
+        """PPO trainer with curriculum learning and LR annealing."""
+
         def __init__(self,
                      env: RocketEnvironment,
-                     hidden_dim: int = 128,
+                     hidden_dim: int = 256,
                      lr_policy: float = 3e-4,
                      lr_value: float = 1e-3,
                      gamma: float = 0.99,
                      gae_lambda: float = 0.95,
                      clip_epsilon: float = 0.2,
-                     entropy_coef: float = 0.01,
+                     entropy_coef: float = 0.02,
                      value_coef: float = 0.5,
                      max_grad_norm: float = 0.5,
                      device: str = 'auto'):
-            
+
             self.env = env
             self.gamma = gamma
             self.gae_lambda = gae_lambda
@@ -253,24 +275,28 @@ if TORCH_AVAILABLE:
             self.entropy_coef = entropy_coef
             self.value_coef = value_coef
             self.max_grad_norm = max_grad_norm
-            
+            self.lr_policy_init = lr_policy
+            self.lr_value_init = lr_value
+
             if device == 'auto':
                 self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
             else:
                 self.device = torch.device(device)
-            
+
             print(f"Using device: {self.device}")
-            
+
             state_dim = 12
             action_dim = 4
-            
+
             self.policy = PolicyNetwork(state_dim, action_dim, hidden_dim).to(self.device)
             self.value = ValueNetwork(state_dim, hidden_dim).to(self.device)
-            
+
             self.policy_optimizer = optim.Adam(self.policy.parameters(), lr=lr_policy)
             self.value_optimizer = optim.Adam(self.value.parameters(), lr=lr_value)
-            
+
             self.training_stats = []
+            self._curriculum_streak = 0
+            self._curriculum_threshold = -5.0
             
         def collect_trajectories(self, num_steps: int = 2048) -> Dict:
             """Collect experience from environment."""
@@ -416,46 +442,76 @@ if TORCH_AVAILABLE:
                 'entropy': np.mean(entropy_losses)
             }
         
+        def _anneal_lr(self, update: int, num_updates: int):
+            frac = 1.0 - update / max(num_updates, 1)
+            lr_p = self.lr_policy_init * max(frac, 0.03)
+            lr_v = self.lr_value_init * max(frac, 0.03)
+            for pg in self.policy_optimizer.param_groups:
+                pg['lr'] = lr_p
+            for pg in self.value_optimizer.param_groups:
+                pg['lr'] = lr_v
+
+        def _maybe_advance_curriculum(self, mean_reward: float):
+            if mean_reward > self._curriculum_threshold:
+                self._curriculum_streak += 1
+            else:
+                self._curriculum_streak = 0
+
+            if self._curriculum_streak >= 10:
+                new_level = min(self.env.difficulty + 1, len(CURRICULUM_LEVELS) - 1)
+                if new_level > self.env.difficulty:
+                    self.env.set_difficulty(new_level)
+                    self._curriculum_streak = 0
+                    print(f"  >> Curriculum advanced to level {new_level}", flush=True)
+
         def train(self, total_timesteps: int = 1000000,
-                  steps_per_update: int = 2048,
+                  steps_per_update: int = 4096,
                   epochs_per_update: int = 10,
                   log_interval: int = 10) -> List[Dict]:
-            """Main training loop."""
+            """Main training loop with curriculum and LR annealing."""
             print(f"\nStarting PPO Training")
             print(f"Total timesteps: {total_timesteps}")
             print(f"Steps per update: {steps_per_update}")
+            print(f"Curriculum level: {self.env.difficulty}")
             print("=" * 60)
-            
+
             num_updates = total_timesteps // steps_per_update
-            
+
             for update in range(num_updates):
+                self._anneal_lr(update, num_updates)
+
                 batch = self.collect_trajectories(steps_per_update)
-                
+
                 update_stats = self.update(batch, epochs=epochs_per_update)
-                
+
                 if batch['episode_rewards']:
                     mean_reward = np.mean(batch['episode_rewards'])
                     max_reward = np.max(batch['episode_rewards'])
                 else:
                     mean_reward = 0
                     max_reward = 0
-                
+
+                self._maybe_advance_curriculum(mean_reward)
+
                 stats = {
                     'update': update,
                     'timestep': (update + 1) * steps_per_update,
                     'mean_reward': mean_reward,
                     'max_reward': max_reward,
                     'episodes': len(batch['episode_rewards']),
+                    'difficulty': self.env.difficulty,
                     **update_stats
                 }
                 self.training_stats.append(stats)
-                
+
                 if (update + 1) % log_interval == 0:
+                    lr = self.policy_optimizer.param_groups[0]['lr']
                     print(f"Update {update+1}/{num_updates} | "
                           f"Timestep {stats['timestep']} | "
                           f"Reward: {mean_reward:.2f} (max: {max_reward:.2f}) | "
-                          f"Policy Loss: {update_stats['policy_loss']:.4f}")
-            
+                          f"Policy Loss: {update_stats['policy_loss']:.4f} | "
+                          f"Lvl: {self.env.difficulty} LR: {lr:.1e}")
+
             return self.training_stats
         
         def save(self, path: str):
@@ -533,78 +589,159 @@ if TORCH_AVAILABLE:
             return results
 
 
+def _fmt_array(arr, per_line=10):
+    """Format a flat numpy array as C initializer list."""
+    flat = arr.flatten()
+    lines = []
+    for i in range(0, len(flat), per_line):
+        chunk = flat[i:i+per_line]
+        lines.append('    ' + ', '.join(f'{x:.6f}f' for x in chunk))
+    return ',\n'.join(lines)
+
+
 def export_policy_to_cpp(trainer: 'PPOTrainer', output_path: str):
-    """Export trained policy to C++ header for ESP32."""
-    policy = trainer.policy
-    
-    weights = []
-    for name, param in policy.named_parameters():
-        weights.append((name, param.detach().cpu().numpy()))
-    
-    cpp_code = '''
-// Auto-generated Neural Network Policy for ESP32
+    """Export trained policy to C++ header with real NN inference for ESP32.
+
+    Network: shared(12->256->256) with LayerNorm+ReLU, then mean(256->128->4) Tanh*12.
+    """
+    policy = trainer.policy.cpu().eval()
+    sd = {k: v.detach().numpy() for k, v in policy.state_dict().items()}
+
+    s0_w = sd['shared.0.weight']   # (256, 12)
+    s0_b = sd['shared.0.bias']     # (256,)
+    ln0_w = sd['shared.1.weight']  # (256,)
+    ln0_b = sd['shared.1.bias']    # (256,)
+    s3_w = sd['shared.3.weight']   # (256, 256)
+    s3_b = sd['shared.3.bias']     # (256,)
+    ln1_w = sd['shared.4.weight']  # (256,)
+    ln1_b = sd['shared.4.bias']    # (256,)
+    m0_w = sd['mean.0.weight']     # (128, 256)
+    m0_b = sd['mean.0.bias']       # (128,)
+    m2_w = sd['mean.2.weight']     # (4, 128)
+    m2_b = sd['mean.2.bias']       # (4,)
+
+    H = s0_w.shape[0]
+    H2 = m0_w.shape[0]
+    STATE_DIM = s0_w.shape[1]
+    ACTION_DIM = m2_w.shape[0]
+
+    cpp = f"""// Auto-generated NN Policy for ESP32  ({STATE_DIM}->{H}->{H}->{H2}->{ACTION_DIM})
 // Trained with PPO on rocket stabilization task
+// DO NOT EDIT - regenerate with export_policy_to_cpp()
 
 #ifndef RL_POLICY_H
 #define RL_POLICY_H
 
-#include <Arduino.h>
 #include <math.h>
 
-class NeuralPolicy {
-public:
-    // Network weights (flattened)
-'''
-    
-    for name, w in weights:
-        flat_name = name.replace('.', '_')
-        flat_w = w.flatten()
-        cpp_code += f"    static constexpr float {flat_name}[{len(flat_w)}] = {{"
-        cpp_code += ', '.join([f'{x:.6f}f' for x in flat_w])
-        cpp_code += "};\n"
-    
-    cpp_code += '''
-    
-    void getAction(float* state, float* action) {
-        // Forward pass through network
-        // Simplified for ESP32 (no batching)
-        
-        // This is a placeholder - full implementation would
-        // include matrix multiplications matching the network architecture
-        
-        // For now, fall back to PID-like behavior
-        float roll_error = state[0] * 45.0f;  // Denormalize
-        float pitch_error = state[1] * 45.0f;
-        float roll_rate = state[3] * 5.0f;
-        float pitch_rate = state[4] * 5.0f;
-        
-        float Kp = 0.5f, Kd = 0.2f;
-        float roll_cmd = Kp * roll_error + Kd * roll_rate;
-        float pitch_cmd = Kp * pitch_error + Kd * pitch_rate;
-        
-        // Canard mixing
-        action[0] = constrain(roll_cmd, -12.0f, 12.0f);  // Left
-        action[1] = constrain(roll_cmd, -12.0f, 12.0f);  // Right
-        action[2] = constrain(pitch_cmd, -12.0f, 12.0f); // Up
-        action[3] = constrain(pitch_cmd, -12.0f, 12.0f); // Down
-    }
-    
-private:
-    float relu(float x) { return x > 0 ? x : 0; }
-    float tanh_approx(float x) {
-        if (x < -3) return -1;
-        if (x > 3) return 1;
-        return x * (27 + x*x) / (27 + 9*x*x);
-    }
-};
+#define RL_STATE_DIM  {STATE_DIM}
+#define RL_HIDDEN     {H}
+#define RL_HIDDEN2    {H2}
+#define RL_ACTION_DIM {ACTION_DIM}
+
+static const float S0_W[RL_HIDDEN * RL_STATE_DIM] = {{
+{_fmt_array(s0_w)}
+}};
+static const float S0_B[RL_HIDDEN] = {{
+{_fmt_array(s0_b)}
+}};
+static const float LN0_W[RL_HIDDEN] = {{
+{_fmt_array(ln0_w)}
+}};
+static const float LN0_B[RL_HIDDEN] = {{
+{_fmt_array(ln0_b)}
+}};
+static const float S3_W[RL_HIDDEN * RL_HIDDEN] = {{
+{_fmt_array(s3_w)}
+}};
+static const float S3_B[RL_HIDDEN] = {{
+{_fmt_array(s3_b)}
+}};
+static const float LN1_W[RL_HIDDEN] = {{
+{_fmt_array(ln1_w)}
+}};
+static const float LN1_B[RL_HIDDEN] = {{
+{_fmt_array(ln1_b)}
+}};
+static const float M0_W[RL_HIDDEN2 * RL_HIDDEN] = {{
+{_fmt_array(m0_w)}
+}};
+static const float M0_B[RL_HIDDEN2] = {{
+{_fmt_array(m0_b)}
+}};
+static const float M2_W[RL_ACTION_DIM * RL_HIDDEN2] = {{
+{_fmt_array(m2_w)}
+}};
+static const float M2_B[RL_ACTION_DIM] = {{
+{_fmt_array(m2_b)}
+}};
+
+static inline float rl_relu(float x) {{ return x > 0.0f ? x : 0.0f; }}
+
+static inline float rl_tanh(float x) {{
+    if (x < -3.0f) return -1.0f;
+    if (x >  3.0f) return  1.0f;
+    float x2 = x * x;
+    return x * (27.0f + x2) / (27.0f + 9.0f * x2);
+}}
+
+static void rl_matmul(const float* W, const float* x, const float* b,
+                       float* out, int rows, int cols) {{
+    for (int i = 0; i < rows; i++) {{
+        float s = b[i];
+        const float* wi = W + i * cols;
+        for (int j = 0; j < cols; j++) {{
+            s += wi[j] * x[j];
+        }}
+        out[i] = s;
+    }}
+}}
+
+static void rl_layer_norm(float* x, const float* gamma, const float* beta, int n) {{
+    float mean = 0.0f, var = 0.0f;
+    for (int i = 0; i < n; i++) mean += x[i];
+    mean /= n;
+    for (int i = 0; i < n; i++) {{ float d = x[i] - mean; var += d * d; }}
+    var /= n;
+    float inv_std = 1.0f / sqrtf(var + 1e-5f);
+    for (int i = 0; i < n; i++) {{
+        x[i] = gamma[i] * (x[i] - mean) * inv_std + beta[i];
+    }}
+}}
+
+static void rl_policy_forward(const float state[RL_STATE_DIM],
+                               float action[RL_ACTION_DIM]) {{
+    float h1[RL_HIDDEN], h2[RL_HIDDEN], h3[RL_HIDDEN2];
+
+    // shared.0: Linear(12, 256) + LayerNorm + ReLU
+    rl_matmul(S0_W, state, S0_B, h1, RL_HIDDEN, RL_STATE_DIM);
+    rl_layer_norm(h1, LN0_W, LN0_B, RL_HIDDEN);
+    for (int i = 0; i < RL_HIDDEN; i++) h1[i] = rl_relu(h1[i]);
+
+    // shared.3: Linear(256, 256) + LayerNorm + ReLU
+    rl_matmul(S3_W, h1, S3_B, h2, RL_HIDDEN, RL_HIDDEN);
+    rl_layer_norm(h2, LN1_W, LN1_B, RL_HIDDEN);
+    for (int i = 0; i < RL_HIDDEN; i++) h2[i] = rl_relu(h2[i]);
+
+    // mean.0: Linear(256, 128) + ReLU
+    rl_matmul(M0_W, h2, M0_B, h3, RL_HIDDEN2, RL_HIDDEN);
+    for (int i = 0; i < RL_HIDDEN2; i++) h3[i] = rl_relu(h3[i]);
+
+    // mean.2: Linear(128, 4) + Tanh * 12
+    rl_matmul(M2_W, h3, M2_B, action, RL_ACTION_DIM, RL_HIDDEN2);
+    for (int i = 0; i < RL_ACTION_DIM; i++) {{
+        action[i] = rl_tanh(action[i]) * 12.0f;
+    }}
+}}
 
 #endif // RL_POLICY_H
-'''
-    
+"""
+
     with open(output_path, 'w') as f:
-        f.write(cpp_code)
-    
-    print(f"Policy exported to: {output_path}")
+        f.write(cpp)
+
+    total_params = sum(v.size for v in sd.values())
+    print(f"Policy exported to: {output_path} ({total_params} parameters)")
 
 
 def main():
@@ -631,10 +768,11 @@ def main():
     env = RocketEnvironment(
         wind_speed_range=(0, 8),
         episode_length=2000,
-        dt=0.005
+        dt=0.005,
+        difficulty=0
     )
-    
-    trainer = PPOTrainer(env, hidden_dim=128)
+
+    trainer = PPOTrainer(env, hidden_dim=256)
     
     if args.load:
         trainer.load(args.load)

@@ -37,7 +37,8 @@ def compute_inlet_conditions(velocity: float, turbulence_intensity: float = 0.01
 def setup_case(stl_path: str, case_dir: str, velocity: float,
                aoa_deg: float = 0.0, canard_deg: float = 0.0,
                n_procs: int = 16, rocket_length: float = 0.587,
-               body_radius: float = 0.0375):
+               body_radius: float = 0.0375,
+               refinement_level: int = 1):
     """Copy template and parametrise for a specific run condition."""
     case = Path(case_dir)
     if case.exists():
@@ -49,7 +50,6 @@ def setup_case(stl_path: str, case_dir: str, velocity: float,
     trisurface = case / "constant" / "triSurface"
     trisurface.mkdir(parents=True, exist_ok=True)
 
-    # Rocket geometry is +Z-up; CFD flow is +X. Rotate -90° about Y.
     try:
         import trimesh
         import numpy as np
@@ -65,28 +65,31 @@ def setup_case(stl_path: str, case_dir: str, velocity: float,
     d = 2 * body_radius
     S_ref = math.pi * body_radius ** 2
 
-    # Domain sizing: ~15 diameters in each transverse direction, 20 ahead/behind
     domain_half = 15 * d
     x_min = -10 * rocket_length
     x_max = 20 * rocket_length
 
-    # Coarse background mesh; snappyHexMesh handles local refinement near body
-    cell_size = d * 2
+    cell_size_map = {1: d * 2, 2: d * 1, 3: d * 0.5}
+    max_cells_map = {1: 8_000_000, 2: 16_000_000, 3: 32_000_000}
+    cell_size = cell_size_map.get(refinement_level, d * 2)
+    max_global_cells = max_cells_map.get(refinement_level, 8_000_000)
+
     nX = max(int((x_max - x_min) / cell_size), 40)
     nY = max(int(2 * domain_half / cell_size), 20)
     nZ = nY
 
-    # Velocity components (rocket along +X, AoA rotates in X-Y plane)
     aoa_rad = math.radians(aoa_deg)
     Ux = velocity * math.cos(aoa_rad)
     Uy = velocity * math.sin(aoa_rad)
     Uz = 0.0
 
+    drag_dir = f"{math.cos(aoa_rad):.8f} {math.sin(aoa_rad):.8f} 0"
+    lift_dir = f"{-math.sin(aoa_rad):.8f} {math.cos(aoa_rad):.8f} 0"
+
     k, omega = compute_inlet_conditions(velocity)
     Re = velocity * rocket_length / NU_AIR if velocity > 0.1 else 1e5
 
-    # Location in mesh: a point outside the rocket body, in the domain
-    location_y = domain_half * 0.5
+    location_y = domain_half * 0.75
 
     replacements = {
         "__XMIN__": f"{x_min:.4f}",
@@ -108,6 +111,9 @@ def setup_case(stl_path: str, case_dir: str, velocity: float,
         "__AREF__": f"{S_ref:.6f}",
         "__NPROCS__": str(n_procs),
         "__LOCATIONY__": f"{location_y:.4f}",
+        "__DRAGDIR__": drag_dir,
+        "__LIFTDIR__": lift_dir,
+        "__MAXGLOBALCELLS__": str(max_global_cells),
     }
 
     for root, _dirs, files in os.walk(case):
@@ -208,8 +214,22 @@ def run_openfoam(case_dir: str, n_procs: int = 16, parallel: bool = True,
     return True
 
 
+COL_CD = 1
+COL_CL = 4
+COL_CM_PITCH = 7
+COL_CM_ROLL = 8
+COL_CM_YAW = 9
+COL_CS = 10
+NUM_COLS = 13
+
+
 def extract_coefficients(case_dir: str) -> dict:
-    """Parse forceCoeffs output to get Cd, Cl, Cm."""
+    """Parse forceCoeffs coefficient.dat for Cd, Cl, CmPitch, CmYaw, Cs.
+
+    OpenFOAM column layout (13 columns):
+      Time | Cd | Cd(f) | Cd(r) | Cl | Cl(f) | Cl(r) |
+      CmPitch | CmRoll | CmYaw | Cs | Cs(f) | Cs(r)
+    """
     case = Path(case_dir)
     coeff_dir = case / "postProcessing" / "forces"
     if not coeff_dir.exists():
@@ -234,25 +254,31 @@ def extract_coefficients(case_dir: str) -> dict:
     if not data_lines:
         return {"error": "No data in coefficient file"}
 
-    # Average last 200 iterations for converged values
-    values = []
+    rows = []
     for line in data_lines[-200:]:
         parts = line.split()
-        if len(parts) >= 4:
+        if len(parts) >= NUM_COLS:
             try:
-                values.append([float(x) for x in parts[:4]])
+                rows.append([float(x) for x in parts[:NUM_COLS]])
             except ValueError:
                 continue
 
-    if not values:
+    if not rows:
         return {"error": "Could not parse coefficient data"}
 
-    arr = [list(x) for x in zip(*values)]
+    cols = list(zip(*rows))
+
+    def _avg(idx):
+        return sum(cols[idx]) / len(cols[idx])
+
     result = {
-        "Cd": sum(arr[1]) / len(arr[1]),
-        "Cl": sum(arr[2]) / len(arr[2]),
-        "Cm": sum(arr[3]) / len(arr[3]) if len(arr) > 3 else 0.0,
-        "n_averaged": len(values),
+        "Cd": _avg(COL_CD),
+        "Cl": _avg(COL_CL),
+        "CmPitch": _avg(COL_CM_PITCH),
+        "CmYaw": _avg(COL_CM_YAW),
+        "Cs": _avg(COL_CS),
+        "Cm": _avg(COL_CM_PITCH),
+        "n_averaged": len(rows),
     }
 
     meta_file = case / "case_meta.json"
@@ -279,6 +305,8 @@ if __name__ == "__main__":
     parser.add_argument("--body-radius", type=float, default=0.0375)
     parser.add_argument("--serial-mesh", action="store_true",
                         help="Mesh with serial snappyHexMesh, then parallel simpleFoam")
+    parser.add_argument("--refinement-level", type=int, default=1, choices=[1, 2, 3],
+                        help="Mesh refinement: 1=coarse, 2=medium, 3=fine")
     args = parser.parse_args()
 
     if args.extract_only:
@@ -295,6 +323,7 @@ if __name__ == "__main__":
         n_procs=args.nprocs,
         rocket_length=args.rocket_length,
         body_radius=args.body_radius,
+        refinement_level=args.refinement_level,
     )
     print(f"[CFD] Case set up at: {case}", flush=True)
 

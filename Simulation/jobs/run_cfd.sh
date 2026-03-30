@@ -107,7 +107,7 @@ for f in sorted(glob.glob('${RESULTS_DIR}/*/cfd_results.json')):
         r = json.load(fh)
         r['case'] = os.path.basename(os.path.dirname(f))
         results.append(r)
-        print(f'{r[\"case\"]:15s}  Cd={r.get(\"Cd\",0):.4f}  Cl={r.get(\"Cl\",0):.4f}  Cm={r.get(\"Cm\",0):.4f}')
+        print(f'{r[\"case\"]:15s}  Cd={r.get(\"Cd\",0):.4f}  Cl={r.get(\"Cl\",0):.6f}  CmP={r.get(\"CmPitch\",0):.6f}  Cs={r.get(\"Cs\",0):.6f}')
 
 with open('${RESULTS_DIR}/all_results.json', 'w') as fh:
     json.dump(results, fh, indent=2)

@@ -57,7 +57,7 @@ class MCResult:
 
 def _run_one(args):
     """Module-level worker for parallel execution."""
-    (run_id, seed, gains_dict, unc_dict) = args
+    (run_id, seed, gains_dict, unc_dict, aero_table_path) = args
     rng = np.random.RandomState(seed)
     u = UncertaintyParameters(**unc_dict)
 
@@ -68,6 +68,13 @@ def _run_one(args):
     rocket.Iyy *= max(0.5, rng.normal(1.0, u.Iyy_std_pct))
     rocket.Izz *= max(0.5, rng.normal(1.0, u.Iyy_std_pct))
     rocket.Cd0 *= max(0.5, rng.normal(1.0, u.Cd0_std_pct))
+
+    if aero_table_path:
+        try:
+            from cfd_aero_table import AeroTable
+            rocket.aero_table = AeroTable.from_json(aero_table_path)
+        except Exception:
+            pass
 
     motor = MotorProfile()
     motor.peak_thrust *= max(0.5, rng.normal(1.0, u.thrust_std_pct))
@@ -138,20 +145,24 @@ def _run_one(args):
 
 class MonteCarloAnalysis:
 
-    def __init__(self, gains=None, uncertainty=None, num_workers=None):
+    def __init__(self, gains=None, uncertainty=None, num_workers=None,
+                 aero_table_path=None):
         g = dict(gains or {'Kp_roll': 0.5, 'Ki_roll': 0.0, 'Kd_roll': 0.2})
         self.gains = g
         self.uncertainty = uncertainty or UncertaintyParameters()
         self.num_workers = num_workers
+        self.aero_table_path = aero_table_path
         self.results: List[MCResult] = []
         self._last_elapsed = 0.0
 
     def run_analysis(self, num_runs=1000, base_seed=42):
         print(f"Monte Carlo: {num_runs} runs, workers={self.num_workers or 'serial'}",
               flush=True)
+        if self.aero_table_path:
+            print(f"Using CFD aero table: {self.aero_table_path}", flush=True)
         unc_d = asdict(self.uncertainty)
         args_list = [
-            (i, base_seed + i, self.gains, unc_d)
+            (i, base_seed + i, self.gains, unc_d, self.aero_table_path)
             for i in range(num_runs)
         ]
 
@@ -248,6 +259,8 @@ def main():
     parser.add_argument('--workers', type=int, default=None)
     parser.add_argument('--seed', type=int, default=42)
     parser.add_argument('--gains-file', type=str, default=None)
+    parser.add_argument('--aero-table', type=str, default=None,
+                        help='Path to CFD aero table JSON')
     parser.add_argument('--output-dir', type=str, default='../results')
     args = parser.parse_args()
 
@@ -264,8 +277,11 @@ def main():
     print("Monte Carlo Trajectory Analysis", flush=True)
     print("=" * 60, flush=True)
     print(f"Gains: {gains}", flush=True)
+    if args.aero_table:
+        print(f"Aero table: {args.aero_table}", flush=True)
 
-    mc = MonteCarloAnalysis(gains=gains, num_workers=args.workers)
+    mc = MonteCarloAnalysis(gains=gains, num_workers=args.workers,
+                            aero_table_path=args.aero_table)
     stats = mc.run_analysis(num_runs=args.runs, base_seed=args.seed)
     mc.print_summary(stats)
 
