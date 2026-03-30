@@ -50,6 +50,13 @@ resolve_stl_path() {
 STL_CANDIDATE="${1:-cad/rocket_assembly.stl}"
 STL="$(resolve_stl_path "$STL_CANDIDATE")"
 
+if [ -z "$STL" ] || [ ! -f "$STL" ]; then
+    echo "ERROR: Cannot find STL: $STL_CANDIDATE" >&2
+    exit 1
+fi
+
+STL="$(cd "$(dirname "$STL")" && echo "$(pwd)/$(basename "$STL")")"
+
 # Infer repository root from where the STL lives, then fallback to submit directory layout.
 REPO_ROOT=""
 if [[ "$STL" == */cad/* ]]; then
