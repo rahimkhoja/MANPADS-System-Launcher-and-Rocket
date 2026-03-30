@@ -10,6 +10,7 @@
 
 set -euo pipefail
 export PYTHONUNBUFFERED=1
+export OMPI_MCA_mpi_cuda_support=0
 
 # Lmod / OpenFOAM bashrc require bash (not /bin/sh)
 if [ -f /etc/profile.d/lmod.sh ]; then

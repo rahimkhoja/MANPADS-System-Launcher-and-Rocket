@@ -28,6 +28,8 @@ solvers
 SIMPLE
 {
     nNonOrthogonalCorrectors 2;
+    pRefCell        0;
+    pRefValue       0;
 
     residualControl
     {

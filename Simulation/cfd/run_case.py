@@ -74,7 +74,7 @@ def setup_case(stl_path: str, case_dir: str, velocity: float,
     Re = velocity * rocket_length / NU_AIR if velocity > 0.1 else 1e5
 
     # Location in mesh: a point outside the rocket body, in the domain
-    location_y = domain_half * 0.9
+    location_y = domain_half * 0.5
 
     replacements = {
         "__XMIN__": f"{x_min:.4f}",
