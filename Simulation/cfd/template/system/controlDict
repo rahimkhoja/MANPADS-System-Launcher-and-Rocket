@@ -40,6 +40,7 @@ functions
         patches         ("rocket.*");
         rho             rhoInf;
         rhoInf          1.225;
+        magUInf         __MAGUINF__;
         lRef            __LREF__;
         Aref            __AREF__;
         CofR            (0 0 0);

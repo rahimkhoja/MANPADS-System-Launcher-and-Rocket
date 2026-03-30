@@ -3,8 +3,8 @@
 # Note: set --account if required on your cluster
 #SBATCH --time=06:00:00
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-node=16
-#SBATCH --mem=32G
+#SBATCH --ntasks-per-node=32
+#SBATCH --mem=96G
 #SBATCH --output=results/cfd_%j.out
 #SBATCH --error=results/cfd_%j.err
 

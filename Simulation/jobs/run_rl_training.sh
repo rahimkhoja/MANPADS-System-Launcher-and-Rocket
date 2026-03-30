@@ -5,9 +5,10 @@
 #SBATCH --time=04:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=8
-#SBATCH --mem=32G
-#SBATCH --gres=gpu:1
+#SBATCH --cpus-per-task=32
+#SBATCH --mem=96G
+# GPU disabled: cluster 1080s (sm_61) not supported by installed PyTorch
+# #SBATCH --gres=gpu:1
 
 set -euo pipefail
 export PYTHONUNBUFFERED=1
@@ -30,18 +31,18 @@ VENV_DIR="${SLURM_TMPDIR}/venv"
 python -m venv --system-site-packages "${VENV_DIR}"
 source "${VENV_DIR}/bin/activate"
 
-pip install --no-index torch 2>/dev/null || pip install torch --index-url https://download.pytorch.org/whl/cu121
+pip install --no-index torch 2>/dev/null || pip install torch --index-url https://download.pytorch.org/whl/cpu
 
 cd "${SLURM_SUBMIT_DIR}/../src"
 
 RESULTS_DIR="${SLURM_SUBMIT_DIR}/../results"
 mkdir -p "${RESULTS_DIR}"
 
-python -u -c "import torch; print(f'CUDA: {torch.cuda.is_available()}')"
+python -u -c "import torch; print(f'CUDA: {torch.cuda.is_available()}, Device: cpu (forced)')"
 
 echo ""
-python -u rl_controller.py \
-    --timesteps 500000 \
+CUDA_VISIBLE_DEVICES="" python -u rl_controller.py \
+    --timesteps 2000000 \
     --eval-episodes 100 \
     --export-cpp \
     --output-dir "${RESULTS_DIR}"

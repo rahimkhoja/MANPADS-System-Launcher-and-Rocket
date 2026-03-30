@@ -48,7 +48,19 @@ def setup_case(stl_path: str, case_dir: str, velocity: float,
     stl_src = Path(stl_path).resolve()
     trisurface = case / "constant" / "triSurface"
     trisurface.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(stl_src, trisurface / "rocket.stl")
+
+    # Rocket geometry is +Z-up; CFD flow is +X. Rotate -90° about Y.
+    try:
+        import trimesh
+        import numpy as np
+        mesh = trimesh.load(str(stl_src), force="mesh")
+        if isinstance(mesh, trimesh.Scene):
+            mesh = trimesh.util.concatenate(tuple(mesh.geometry.values()))
+        R = trimesh.transformations.rotation_matrix(-math.pi / 2, [0, 1, 0])
+        mesh.apply_transform(R)
+        mesh.export(str(trisurface / "rocket.stl"))
+    except ImportError:
+        shutil.copy2(stl_src, trisurface / "rocket.stl")
 
     d = 2 * body_radius
     S_ref = math.pi * body_radius ** 2
@@ -91,6 +103,7 @@ def setup_case(stl_path: str, case_dir: str, velocity: float,
         "__UZ__": f"{Uz:.4f}",
         "__K__": f"{k:.6f}",
         "__OMEGA__": f"{omega:.4f}",
+        "__MAGUINF__": f"{velocity:.4f}",
         "__LREF__": f"{rocket_length:.4f}",
         "__AREF__": f"{S_ref:.6f}",
         "__NPROCS__": str(n_procs),

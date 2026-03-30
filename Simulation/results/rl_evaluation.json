@@ -1,0 +1,8 @@
+{
+  "mean_reward": -40.04733044464832,
+  "std_reward": 13.776606539319685,
+  "mean_length": 61.86,
+  "mean_altitude": 2.644713594701719,
+  "mean_roll_rms": 23.102014592281925,
+  "success_rate": 0.0
+}
