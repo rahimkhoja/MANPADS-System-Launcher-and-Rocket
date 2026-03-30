@@ -39,9 +39,9 @@ const int DOWN_CENTER = 115;
 const int MAX_DEFLECTION = 12;
 
 // ============== ROLL CONTROL GAINS ==============
-float Kp = 0.65f;
-float Ki = 0.05f;
-float Kd = 0.28f;
+float Kp = 4.51f;
+float Ki = 0.32f;
+float Kd = 3.67f;
 float integralLimit = 15.0f;
 
 // Optional LiPo sense: GPIO36 + 100k:100k divider to ADC (set -1 to disable)
@@ -156,7 +156,7 @@ void loop() {
     );
 
     float rollDeg = ekf.getRollDeg();
-    float rollRateDeg = (gyro.gyro.x - ekf.getGyroBiasX()) * RAD_TO_DEG;
+    float rollRateDeg = (gyro.gyro.x - ekf.getGyroBiasXRaw()) * RAD_TO_DEG;
 
     switch (sysState) {
     case IDLE:
@@ -207,19 +207,19 @@ void loop() {
     // Telemetry at 20 Hz
     if (millis() - lastTelemetrySent >= 50) {
         if (extendedTelemetry) {
-            // V5 extended: DATA,roll,pitch,yaw,offset,state,Kp,Kd,biasX
+            // V5 extended: DATA,roll,pitch,yaw,offset,state,Kp,Ki,Kd,biasX,Vbatt
             float pitch = ekf.getPitchDeg();
             float yaw = ekf.getYawDeg();
-            float bx = ekf.getGyroBiasX();
+            float bx = ekf.getGyroBiasXRaw() * RAD_TO_DEG;
             const char* st = (sysState == IDLE) ? "IDLE" :
                              (sysState == ARMED) ? "ARMED" :
                              (sysState == IGNITING) ? "IGNITING" :
                              (sysState == FLIGHT) ? "FLIGHT" : "RECOVERY";
-            char buf[128];
+            char buf[160];
             float vb = readBatteryVoltage();
             snprintf(buf, sizeof(buf),
-                "DATA,%.2f,%.2f,%.2f,%d,%s,%.2f,%.2f,%.3f,%.2f",
-                rollDeg, pitch, yaw, lastServoOffset, st, Kp, Kd, bx, vb);
+                "DATA,%.2f,%.2f,%.2f,%d,%s,%.2f,%.2f,%.2f,%.3f,%.2f",
+                rollDeg, pitch, yaw, lastServoOffset, st, Kp, Ki, Kd, bx, vb);
             Serial2.println(buf);
         } else {
             // V4 compatible: DATA,ax,ay,az,roll,rate,offset,state,Kp,Kd,skew

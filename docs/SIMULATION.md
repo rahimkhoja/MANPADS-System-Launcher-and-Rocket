@@ -145,7 +145,13 @@ Monitor with `squeue -u $USER` and check output in `Simulation/results/`.
 ### Grid Search
 For verification. Tests a grid of Kp × Ki × Kd values.
 
-Results are saved to `results/best_gains.json`.
+Results are saved to mode-specific files to prevent overwrites:
+- `results/best_gains_roll.json` — roll-only DE/grid results
+- `results/best_gains_sixaxis.json` — six-axis DE results
+- `results/best_gains.json` — copy of the latest run (either mode)
+
+**Warning:** `best_gains.json` is always overwritten by the most recent
+optimiser run. Use the mode-specific files for reproducibility.
 
 ---
 

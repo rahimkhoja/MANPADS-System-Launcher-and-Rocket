@@ -28,7 +28,7 @@ Dimensions extracted from `cad/rocket_assembly.stl` using trimesh:
 | Nose shape | Short ogive |
 | Canard protrusion | ~2.6 mm beyond body |
 | Fin protrusion | ~2.6 mm beyond body |
-| Launcher tube ID | 95 mm (from `cad/launcher_tube.stl`) |
+| Launcher type | Rail launcher (replaced 95 mm tube) |
 
 **Barrowman analysis of baseline:**
 - CN_alpha total: 2.05 /rad
@@ -97,7 +97,7 @@ configurations** varying:
 
 ### Scoring Criteria
 
-1. **Must fit** within 200 mm deployed OD (folding fins)
+1. **Must fit** within 240 mm deployed OD (rail launcher, no tube bore constraint)
 2. **Stability** ≥ 1.0 calibres (CP aft of CG)
 3. **Maximise** roll authority (canard torque per radian)
 4. **Minimise** drag (Cd0)
@@ -173,6 +173,13 @@ sbatch run_pid_optimizer.sh
 sbatch --dependency=afterok:<pid_job_id> run_monte_carlo.sh
 sbatch run_cfd.sh ../../cad/rocket_assembly.stl
 ```
+
+## CFD Validation Status
+
+CFD validation using OpenFOAM is in progress. Previous runs failed due to patch
+naming mismatches and oversized background meshes. These issues have been fixed
+(see `Simulation/cfd/template/` changes) and new runs are being submitted. Once
+complete, CFD-derived Cd/Cl/Cm will be compared to Barrowman predictions.
 
 ## References
 

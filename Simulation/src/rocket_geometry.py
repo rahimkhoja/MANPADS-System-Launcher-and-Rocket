@@ -236,6 +236,82 @@ def make_fin_set(count: int, root_chord: float, tip_chord: float,
     return trimesh.util.concatenate(meshes)
 
 
+# ── Rail Buttons ─────────────────────────────────────────────────────
+
+def make_rail_buttons(body_radius: float, body_length: float,
+                      button_radius: float = 0.003,
+                      button_height: float = 0.004,
+                      n_circ: int = 16) -> "trimesh.Trimesh":
+    """Two small cylindrical rail buttons on one side of the body.
+
+    Placed at 25% and 75% of body length, protruding radially outward.
+    """
+    if trimesh is None:
+        raise ImportError("trimesh required")
+
+    positions_z = [body_length * 0.25, body_length * 0.75]
+    buttons = []
+    for zp in positions_z:
+        btn = cylinder(radius=button_radius, height=button_height, sections=n_circ)
+        R = trimesh.transformations.euler_matrix(0, math.pi / 2, 0)
+        btn.apply_transform(R)
+        btn.apply_translation([body_radius + button_height / 2, 0, zp])
+        buttons.append(btn)
+    return trimesh.util.concatenate(buttons)
+
+
+# ── Rail Launcher ────────────────────────────────────────────────────
+
+def generate_rail_launcher(rail_length: float = 1.0,
+                           rail_spacing: float = 0.060,
+                           rail_profile: float = 0.0254,
+                           base_width: float = 0.20,
+                           base_depth: float = 0.15,
+                           base_thickness: float = 0.006,
+                           n_circ: int = 16) -> "trimesh.Trimesh":
+    """Parametric rail launcher: two parallel rails on a flat base plate.
+
+    Parameters
+    ----------
+    rail_length : float
+        Length of each rail (m).
+    rail_spacing : float
+        Center-to-center distance between rails (m).
+    rail_profile : float
+        Cross-section size of each rail (square extrusion, m). Default 1010 = 25.4 mm.
+    base_width, base_depth, base_thickness : float
+        Dimensions of the rectangular base plate (m).
+    """
+    if trimesh is None:
+        raise ImportError("trimesh required")
+
+    half_s = rail_spacing / 2
+    half_p = rail_profile / 2
+
+    parts = []
+
+    for sign in (-1, 1):
+        rail = trimesh.creation.box(
+            extents=[rail_profile, rail_profile, rail_length]
+        )
+        rail.apply_translation([sign * half_s, 0, rail_length / 2])
+        parts.append(rail)
+
+    base = trimesh.creation.box(
+        extents=[base_width, base_depth, base_thickness]
+    )
+    base.apply_translation([0, 0, -base_thickness / 2])
+    parts.append(base)
+
+    igniter_mount = cylinder(radius=0.010, height=0.025, sections=n_circ)
+    igniter_mount.apply_translation([0, 0, 0.0125])
+    parts.append(igniter_mount)
+
+    launcher = trimesh.util.concatenate(parts)
+    launcher.fix_normals()
+    return launcher
+
+
 # ── Full Rocket Assembly ─────────────────────────────────────────────
 
 def generate_rocket(nose_shape: str = "ogive",
@@ -260,7 +336,8 @@ def generate_rocket(nose_shape: str = "ogive",
                     canard_thickness: float = 0.001,
                     canard_position: float = None,
                     n_circ: int = 32,
-                    return_parts: bool = False):
+                    return_parts: bool = False,
+                    rail_buttons: bool = False):
     """Generate a complete rocket STL from parametric inputs.
 
     The rocket is oriented along +Z with nose tip at the top.
@@ -302,6 +379,10 @@ def generate_rocket(nose_shape: str = "ogive",
                                canard_span, canard_sweep, canard_thickness,
                                body_radius, canard_position)
         parts.append(canards)
+
+    if rail_buttons:
+        btns = make_rail_buttons(body_radius, body_length)
+        parts.append(btns)
 
     if return_parts:
         for p in parts:

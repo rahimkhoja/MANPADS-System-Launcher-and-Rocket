@@ -13,7 +13,7 @@ This document describes the changes made to the rocket flight computer firmware.
 | Control axes           | Roll only                    | Roll only (PID, same structure)  |
 | D-term source          | Gyro rate                    | Gyro rate (minus estimated bias) |
 | Integral term          | None                         | Optional Ki with anti-windup     |
-| Default gains          | Kp=0.5, Kd=0.2              | Kp=0.65, Ki=0.05, Kd=0.28       |
+| Default gains          | Kp=0.5, Kd=0.2              | Kp=4.51, Ki=0.32, Kd=3.67       |
 | Flight phase detection | Manual state machine         | Automatic apogee detection       |
 | Telemetry format       | Fixed V4 format              | V4 (default) or V5 extended     |
 | I2C clock              | Default (100 kHz)            | 400 kHz Fast Mode               |
@@ -36,8 +36,9 @@ pitch/yaw estimates needed for future 3-axis control.
 
 ### Implementation
 The EKF is implemented in `Firmware/Rocket/src/attitude_ekf.h` as a single header
-(included by `main_improved.cpp`). `getGyroBiasX()` exposes the X gyro bias in
-deg/s for telemetry and the D-term.
+(included by `main_improved.cpp`). `getGyroBiasXRaw()` exposes the X gyro bias
+in **rad/s** (native EKF units). The D-term computation subtracts this from the
+raw gyro reading before converting to deg/s, ensuring correct units throughout.
 
 ---
 
@@ -55,8 +56,9 @@ The D-term uses the gyro rate directly (with bias removed by the EKF), not
 differentiation — a deliberate design choice inherited from V4.
 
 ### Gain Derivation
-Default gains (Kp=0.65, Ki=0.05, Kd=0.28) were found via simulation-based search.
-See `docs/SIMULATION.md` and `Simulation/results/best_gains.json` for cluster runs.
+Default gains (Kp=4.51, Ki=0.32, Kd=3.67) were found via differential evolution
+on the Eureka HPC cluster. See `docs/SIMULATION.md` and
+`Simulation/results/best_gains_roll.json` for the optimised values.
 
 ### Serial commands
 - **`PID,Kp,Kd`** — V4-compatible (sets Ki=0).
@@ -92,7 +94,7 @@ dashboard without modification.
 
 ### V5 Extended Mode
 ```
-DATA,roll,pitch,yaw,offset,state,Kp,Kd,biasX,Vbatt
+DATA,roll,pitch,yaw,offset,state,Kp,Ki,Kd,biasX,Vbatt
 ```
 (`Vbatt` in volts; 0 if ADC disabled.)
 Activated by sending `TELEMETRY_V5` command. Returns to V4 format with

@@ -28,7 +28,7 @@ boundaryField
         type            slip;
     }
 
-    rocket
+    "rocket.*"
     {
         type            noSlip;
     }

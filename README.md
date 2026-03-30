@@ -65,6 +65,14 @@ parametric Python driver, and SLURM job scripts. **`run_cfd.sh` uses
 `--serial-mesh`** (serial snappyHexMesh, parallel `simpleFoam`) and sources
 Lmod under bash for reliable OpenFOAM modules on Eureka.
 
+### Rail Launcher Redesign
+The improved rocket's canards exceed the original 95 mm tube bore. A parametric
+rail launcher (two parallel 2020 aluminium extrusion rails + base plate) replaces
+the tube design, with nylon rail buttons on the rocket body.
+
+### Material Recommendations
+See [MATERIALS.md](docs/MATERIALS.md) for recommended materials per component.
+
 ### HPC Integration
 SLURM job scripts for the Eureka cluster with proper module loading,
 parallel execution, and automated pipelines.
@@ -135,6 +143,7 @@ pio run -t upload              # Flash to ESP32
 | [FIRMWARE_IMPROVEMENTS.md](docs/FIRMWARE_IMPROVEMENTS.md) | V4 → V5 firmware changes |
 | [CLUSTER_GUIDE.md](docs/CLUSTER_GUIDE.md) | Eureka SLURM cluster usage |
 | [CONTRIBUTING.md](docs/CONTRIBUTING.md) | Fork details, credits, AI workflow |
+| [MATERIALS.md](docs/MATERIALS.md) | Recommended materials per component |
 | [WIRING.md](docs/WIRING.md) | Pin assignments and telemetry protocol |
 
 ---

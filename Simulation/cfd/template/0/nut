@@ -29,7 +29,7 @@ boundaryField
         type            slip;
     }
 
-    rocket
+    "rocket.*"
     {
         type            nutkWallFunction;
         value           uniform 0;

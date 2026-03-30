@@ -148,7 +148,7 @@ void loop() {
         if (c == '\n') {
             cmdBuffer.trim(); 
             if (cmdBuffer == "ARM" && sysState == "IDLE") { sysState = "ARMED"; calibrateGyro(); }
-            else if (cmdBuffer == "IGNITE") { sysState = "IGNITING"; igniteStartTime = millis(); igniteServo.write(IGNITE_SERVO_ON); }
+            else if (cmdBuffer == "IGNITE" && sysState == "ARMED") { sysState = "IGNITING"; igniteStartTime = millis(); igniteServo.write(IGNITE_SERVO_ON); }
             else if (cmdBuffer == "CALIBRATE") { calibrateGyro(); }
             else if (cmdBuffer.startsWith("PID,")) {
                 int c1 = cmdBuffer.indexOf(','), c2 = cmdBuffer.indexOf(',', c1 + 1);

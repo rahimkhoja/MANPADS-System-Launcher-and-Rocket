@@ -58,8 +58,8 @@ def setup_case(stl_path: str, case_dir: str, velocity: float,
     x_min = -10 * rocket_length
     x_max = 20 * rocket_length
 
-    # Grid resolution: ~8 cells per diameter in the background mesh
-    cell_size = d / 4
+    # Coarse background mesh; snappyHexMesh handles local refinement near body
+    cell_size = d * 2
     nX = max(int((x_max - x_min) / cell_size), 40)
     nY = max(int(2 * domain_half / cell_size), 20)
     nZ = nY

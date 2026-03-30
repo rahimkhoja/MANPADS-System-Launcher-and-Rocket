@@ -282,16 +282,24 @@ def main():
     suffix = 'sixaxis' if args.six_axis else args.method
     opt.save_results(str(Path(args.output_dir) / f"opt_history_{suffix}.json"))
 
+    result_payload = {
+        'gains': best_gains,
+        'score': best_score,
+        'method': suffix,
+        'six_axis': args.six_axis,
+        'wind_speeds': args.wind_speeds,
+        'elapsed_seconds': elapsed,
+    }
+
+    gains_filename = "best_gains_sixaxis.json" if args.six_axis else "best_gains_roll.json"
+    gains_path = Path(args.output_dir) / gains_filename
+    with open(gains_path, 'w') as f:
+        json.dump(result_payload, f, indent=2)
+
     with open(Path(args.output_dir) / "best_gains.json", 'w') as f:
-        json.dump({
-            'gains': best_gains,
-            'score': best_score,
-            'method': suffix,
-            'six_axis': args.six_axis,
-            'wind_speeds': args.wind_speeds,
-            'elapsed_seconds': elapsed,
-        }, f, indent=2)
-    print(f"Results saved to {args.output_dir}/", flush=True)
+        json.dump(result_payload, f, indent=2)
+
+    print(f"Results saved to {gains_path} (and best_gains.json)", flush=True)
 
 
 if __name__ == "__main__":

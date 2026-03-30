@@ -37,7 +37,7 @@ functions
         writeControl    timeStep;
         writeInterval   1;
 
-        patches         (rocket);
+        patches         ("rocket.*");
         rho             rhoInf;
         rhoInf          1.225;
         lRef            __LREF__;

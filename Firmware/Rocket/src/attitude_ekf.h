@@ -111,8 +111,8 @@ public:
     float getRollDeg() const { return state[0] * RAD_TO_DEG; }
     float getPitchDeg() const { return state[1] * RAD_TO_DEG; }
     float getYawDeg() const { return state[2] * RAD_TO_DEG; }
-    /** Gyro bias X (rad/s) as deg/s — used for D-term / telemetry */
-    float getGyroBiasX() const { return state[3] * RAD_TO_DEG; }
+    /** Gyro bias X in rad/s (native EKF units) — use for D-term math */
+    float getGyroBiasXRaw() const { return state[3]; }
     
     void getRollPitchYaw(float &roll, float &pitch, float &yaw) {
         roll = state[0] * RAD_TO_DEG;

@@ -39,18 +39,17 @@ Pin assignments verified against the firmware source code (V4/V5).
 
 ## Launcher Ground Station (ESP32 DevKit V1)
 
-### I2C Bus (shared by MPU6050, QMC5883L, BMP180)
+### I2C Bus (QMC5883L + BMP180)
 | Signal | GPIO Pin |
 |--------|----------|
 | SDA    | 21       |
 | SCL    | 22       |
 
 ### I2C Device Addresses
-| Device    | Address |
-|-----------|---------|
-| MPU6050   | 0x68    |
-| QMC5883L  | 0x0D    |
-| BMP180    | 0x77    |
+| Device    | Address | Notes |
+|-----------|---------|-------|
+| QMC5883L  | 0x0D    | Compass |
+| BMP180    | 0x77    | Barometer / altimeter |
 
 ### GPS Module (Serial1)
 | Signal | GPIO Pin | Baud Rate |
@@ -97,7 +96,7 @@ Pin assignments verified against the firmware source code (V4/V5).
 ### V5 Extended Format (opt-in via `TELEMETRY_V5` command)
 | Direction       | Format                                                           |
 |-----------------|------------------------------------------------------------------|
-| Rocket → Launcher | `DATA,roll,pitch,yaw,offset,state,Kp,Kd,biasX`              |
+| Rocket → Launcher | `DATA,roll,pitch,yaw,offset,state,Kp,Ki,Kd,biasX,Vbatt`    |
 
 ### Commands
 | Command         | Description                            |
@@ -106,7 +105,8 @@ Pin assignments verified against the firmware source code (V4/V5).
 | `DISARM`        | Disarm (any → IDLE) — V5 only         |
 | `IGNITE`        | Fire ignition servo (ARMED → IGNITING) |
 | `CALIBRATE`     | Re-calibrate IMU                       |
-| `PID,Kp,Kd`    | Set PID gains                          |
+| `PID,Kp,Kd`    | Set PID gains (V4, Ki=0)               |
+| `PID,Kp,Ki,Kd` | Set PID gains with integral term (V5)  |
 | `TELEMETRY_V5`  | Switch to extended format — V5 only    |
 | `TELEMETRY_V4`  | Switch back to V4 format — V5 only     |
 

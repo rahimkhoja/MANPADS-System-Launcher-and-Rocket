@@ -30,10 +30,8 @@ from barrowman import (
 # Constraints from the physical system
 BODY_RADIUS = 0.0375       # m (fixed, 75mm OD tube)
 BODY_LENGTH = 0.549         # m (fixed, existing tube)
-LAUNCHER_TUBE_ID = 0.095    # m (95mm from launcher_tube.stl)
-# Fins are folding: they fold flat inside the tube and deploy after launch.
-# Max deployed radius is a practical/aero limit, not a tube-fit constraint.
-MAX_DEPLOYED_RADIUS = 0.100  # m (200mm OD deployed, reasonable for this scale)
+# Rail launcher: no tube bore constraint. Limit deployed span for practicality.
+MAX_DEPLOYED_RADIUS = 0.120  # m (240mm OD deployed, rail launcher allows wider)
 
 CG_FROM_NOSE = 0.35         # m (default; can add nose weight to move forward)
 ROCKET_MASS = 0.200          # kg
@@ -88,9 +86,8 @@ def evaluate_config(params: dict) -> dict:
 
     result = compute_barrowman(geom, cg_from_nose=CG_FROM_NOSE)
 
-    # Check constraints: fins fold for tube, but deployed radius must be practical
     max_outer_radius = BODY_RADIUS + max(params["fin_span"], params["canard_span"])
-    fits_tube = max_outer_radius <= MAX_DEPLOYED_RADIUS
+    fits_rail = max_outer_radius <= MAX_DEPLOYED_RADIUS
 
     return {
         "params": params,
@@ -99,7 +96,7 @@ def evaluate_config(params: dict) -> dict:
         "stability_cal": result.stability_cal,
         "Cd0": result.Cd0,
         "roll_authority": result.roll_authority,
-        "fits_tube": fits_tube,
+        "fits_rail": fits_rail,
         "max_outer_radius_mm": max_outer_radius * 1000,
         "CNa_nose": result.CNa_nose,
         "CNa_fins": result.CNa_fins,
@@ -116,7 +113,7 @@ def score_config(r: dict) -> float:
     3. Maximise roll authority
     4. Minimise drag
     """
-    if not r["fits_tube"]:
+    if not r["fits_rail"]:
         return -1e6
 
     stability = r["stability_cal"]

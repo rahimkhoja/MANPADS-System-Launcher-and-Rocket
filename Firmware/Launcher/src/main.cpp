@@ -181,25 +181,37 @@ void processSerial2() {
             lastHeartbeatTime = millis();
             
             if (msg.startsWith("DATA,")) {
-                int c[10]; // 10 commas for the new skew array
+                int c[12];
+                int nCommas = 0;
                 c[0] = msg.indexOf(',');
-                for(int i=1; i<10; i++) c[i] = msg.indexOf(',', c[i-1] + 1);
-                
-                if (c[9] > 0) { // Check that all fields arrived
+                for (int i = 1; i < 12 && c[i-1] > 0; i++) {
+                    c[i] = msg.indexOf(',', c[i-1] + 1);
+                    nCommas = i;
+                }
+
+                if (nCommas >= 9) {
                     mpu_ax = msg.substring(c[0]+1, c[1]).toFloat();
                     mpu_ay = msg.substring(c[1]+1, c[2]).toFloat();
                     mpu_az = msg.substring(c[2]+1, c[3]).toFloat();
-                    
+
                     String roll = msg.substring(c[3]+1, c[4]);
                     String rate = msg.substring(c[4]+1, c[5]);
                     String out = msg.substring(c[5]+1, c[6]);
                     String state = msg.substring(c[6]+1, c[7]);
                     String kp = msg.substring(c[7]+1, c[8]);
-                    String kd = msg.substring(c[8]+1, c[9]);
-                    String skew = msg.substring(c[9]+1);
+                    String kd, extra;
+                    if (nCommas >= 10 && c[10] > 0) {
+                        // V5: ...,Kp,Ki,Kd,biasX,Vbatt
+                        kd = msg.substring(c[9]+1, c[10]);
+                        extra = msg.substring(c[10]+1);
+                    } else {
+                        // V4: ...,Kp,Kd,skew
+                        kd = msg.substring(c[8]+1, c[9]);
+                        extra = msg.substring(c[9]+1);
+                    }
 
                     sendToDashboard("T," + String(millis()) + "," + roll + "," + rate + "," + out);
-                    sendToDashboard("STATUS:" + state + "," + kp + "," + kd + "," + skew);
+                    sendToDashboard("STATUS:" + state + "," + kp + "," + kd + "," + extra);
                 }
             }
         }

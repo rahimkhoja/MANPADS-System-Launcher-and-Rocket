@@ -24,7 +24,7 @@ geometry
 castellatedMeshControls
 {
     maxLocalCells       500000;
-    maxGlobalCells      4000000;
+    maxGlobalCells      8000000;
     minRefinementCells  10;
     maxLoadUnbalance    0.10;
     nCellsBetweenLevels 3;
@@ -76,7 +76,7 @@ addLayersControls
     relativeSizes   true;
     layers
     {
-        rocket
+        "rocket.*"
         {
             nSurfaceLayers  3;
         }

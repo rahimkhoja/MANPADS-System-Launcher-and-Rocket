@@ -1,0 +1,12 @@
+{
+  "gains": {
+    "Kp_roll": 4.512162535997526,
+    "Ki_roll": 0.32038102022047255,
+    "Kd_roll": 3.666076280399192
+  },
+  "score": 106.9459574946872,
+  "method": "de",
+  "six_axis": false,
+  "wind_speeds": [0.0, 2.0, 5.0],
+  "notes": "Roll gains from DE (30 gen, job 2039). Kp_roll=4.51, Ki_roll=0.32, Kd_roll=3.67."
+}

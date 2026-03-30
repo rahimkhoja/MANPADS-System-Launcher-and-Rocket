@@ -28,7 +28,7 @@ boundaryField
         type            slip;
     }
 
-    rocket
+    "rocket.*"
     {
         type            omegaWallFunction;
         value           uniform __OMEGA__;
