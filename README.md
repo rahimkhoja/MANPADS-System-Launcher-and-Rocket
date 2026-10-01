@@ -1,7 +1,6 @@
 # MANPADS Rocket & Launcher Prototype
 
-> **Fork notice:** This is an enhanced fork of the original project by
-> [Rahim Khoja](https://github.com/rahimkhoja). The simulation framework,
+> **Fork notice:** This is an enhanced fork of the original project. The simulation framework,
 > firmware improvements, and documentation were developed with the assistance
 > of [Cursor](https://cursor.com), an AI-powered code editor, running
 > analysis on the Digital Research Alliance of Canada's Eureka HPC cluster.
